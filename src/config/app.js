@@ -13,7 +13,7 @@ const app = express();
 app.use(cookieParser());
 
 app.use(cors({
-  origin      : 'http://localhost:5173',  // URL del front
+  origin      : 'http://192.168.0.213:5173',  // URL del front
   credentials : true                      // ← ¡importante!
 }));
 app.use(express.json());

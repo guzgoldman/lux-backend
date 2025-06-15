@@ -3,8 +3,9 @@ const express = require('express');
 const router  = express.Router();
 
 const {
-  listarPendientes,
-  aceptar
+  listarPreinscripcion,
+  aceptar,
+  ocultar
 } = require('./adminPreinscripcionController');
 
 const {
@@ -16,7 +17,7 @@ router.get(
   '/',
   verifyToken,
   requireRole('Administrador'),
-  listarPendientes
+  listarPreinscripcion
 );
 
 router.post(
@@ -24,6 +25,13 @@ router.post(
   verifyToken,
   requireRole('Administrador'),
   aceptar
+);
+
+router.post(
+  '/:personaId/ocultar',
+  verifyToken,
+  requireRole('Administrador'),
+  ocultar
 );
 
 module.exports = router;
