@@ -10,37 +10,22 @@ const {
   AlumnoCarrera,
   Preinscripcion,
   sequelize
-} = require('../../models');          // <-- ajustá si tu carpeta de models está en otro lado
+} = require('../../models');
 
-/**
- * GET /api/admin/preinscripcion
- * Devuelve personas que NO tienen usuario asociado.
- */
-exports.listarPendientes = async (_req, res, next) => {
+exports.listarPreinscripcion = async (_req, res, next) => {
   try {
     const personas = await Persona.findAll({
       attributes: { exclude: ['createdAt', 'updatedAt'] },
 
       include: [
-        // 1) LEFT JOIN a usuario para poder filtrar los que ya tienen cuenta
-        {
-          model: Usuario,
-          attributes: ['id'],
-          required: false          // LEFT JOIN
-        },
-
         // 2) INNER JOIN a preinscripcion pendiente + visible
         {
           model: Preinscripcion,
-          attributes: ['id', 'comentario'],
-          where: { estado: 'PENDIENTE', visible: 1 },
-          required: true           // INNER JOIN: solo las que cumplen el where
+          attributes: ['id', 'id_carrera', 'comentario'],
+          where: { estado: 'Pendiente', visible: 1 },
+          required: true 
         }
       ],
-
-      // ⇣  solo personas sin usuario creado
-      where: { '$usuario.id$': null },
-
       order: [['fecha_registro', 'ASC']]
     });
 
@@ -50,72 +35,98 @@ exports.listarPendientes = async (_req, res, next) => {
   }
 };
 
-/**
- * POST /api/admin/preinscripcion/:personaId/aceptar
- * Crea usuario, rol y activa inscripción a una carrera.
- */
 exports.aceptar = async (req, res, next) => {
   const { personaId } = req.params;
-  const { username, password, tipoAlumnoId, carreraId } = req.body;
+  const { tipoAlumnoId, carreraId } = req.body;
 
   try {
     await sequelize.transaction(async (t) => {
-      // 1) Validaciones básicas
       const persona = await Persona.findByPk(personaId, { transaction: t });
       if (!persona) throw new Error('Persona no encontrada');
 
-      const existe = await Usuario.findOne({ where: { username } });
-      if (existe) throw new Error('El nombre de usuario ya existe');
+      // Buscar preinscripcion pendiente y visible
+      const preinscripcion = await Preinscripcion.findOne({
+        where: { id_persona: persona.id, estado: 'Pendiente', visible: 1 },
+        transaction: t
+      });
+      if (!preinscripcion) throw new Error('No se encontró una preinscripción pendiente para esta persona.');
 
-      // 2) Alta en usuario
-      const hash = await bcrypt.hash(password, 10);
+      // Actualizar estado y visibilidad
+      preinscripcion.estado = 'Aprobada';
+      preinscripcion.visible = 0;
+      await preinscripcion.save({ transaction: t });
 
-      const usuario = await Usuario.create(
-        {
-          username,
-          password: hash,
+      // Buscar usuario existente para esa persona
+      let usuario = await Usuario.findOne({ where: { id_persona: persona.id }, transaction: t });
+
+      if (!usuario) {
+        // Autogenerar username y password igual al dni
+        const dni = persona.dni;
+        // Validar que no exista otro usuario con ese username
+        const existe = await Usuario.findOne({ where: { username: dni }, transaction: t });
+        if (existe) throw new Error('Ya existe un usuario con ese DNI como username');
+
+        usuario = await Usuario.create({
+          username: dni,
+          password: await bcrypt.hash(dni, 10),
           id_persona: persona.id
-        },
-        { transaction: t }
-      );
+        }, { transaction: t });
+      }
 
-      // 3) Rol “Alumno”
+      // Rol "Alumno" (si no lo tiene, asignar)
       let rolAlumno = await Rol.findOne({ where: { nombre: 'Alumno' }, transaction: t });
       if (!rolAlumno) {
-        // semilla de respaldo si todavía no existe
         rolAlumno = await Rol.create({ nombre: 'Alumno' }, { transaction: t });
       }
 
-      await RolUsuario.create(
-        { id_usuario: usuario.id, id_rol: rolAlumno.id },
-        { transaction: t }
+      const yaEsAlumno = await RolUsuario.findOne({
+        where: { id_usuario: usuario.id, id_rol: rolAlumno.id },
+        transaction: t
+      });
+      if (!yaEsAlumno) {
+        await RolUsuario.create(
+          { id_usuario: usuario.id, id_rol: rolAlumno.id },
+          { transaction: t }
+        );
+      }
+
+      // Inscribirlo en la carrera (si ya está en esa carrera no volver a inscribirlo)
+      const yaInscripto = await AlumnoCarrera.findOne({
+        where: { id_persona: persona.id, id_carrera: carreraId },
+        transaction: t
+      });
+      if (!yaInscripto) {
+        await AlumnoCarrera.create(
+          {
+            id_persona: persona.id,
+            id_carrera: carreraId,
+            id_tipo_alumno: tipoAlumnoId
+          },
+          { transaction: t }
+        );
+      }
+
+      res.status(201).json({ usuarioId: usuario.id, username: usuario.username });
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.ocultar = async (req, res, next) => {
+  const { personaId } = req.params;
+
+  try {
+    await sequelize.transaction(async (t) => {
+      const persona = await Persona.findByPk(personaId, { transaction: t });
+      if (!persona) throw new Error('Persona no encontrada');
+
+      await Preinscripcion.update(
+        { estado: 'Oculta', visible: 0 },
+        { where: { id_persona: persona.id }, transaction: t }
       );
 
-      await AlumnoCarrera.create(
-        {
-          id_persona: persona.id,
-          id_carrera: carreraId,
-          id_tipo_alumno: tipoAlumnoId
-        }, {
-          transaction: t
-        }
-      )
-
-      // // 4) Activar inscripción en la carrera
-      // const [insc] = await AlumnoCarrera.findOrCreate({
-      //   where: { id_persona: persona.id, id_carrera: carreraId },
-      //   defaults: { fecha_inscripcion: new Date(), activo: 1 },
-      //   transaction: t
-      // });
-
-      // if (!insc.activo) {
-      //   await insc.update(
-      //     { activo: 1, fecha_inscripcion: new Date() },
-      //     { transaction: t }
-      //   );
-      // }
-
-      res.status(201).json({ usuarioId: usuario.id });
+      res.status(204).send();
     });
   } catch (err) {
     next(err);

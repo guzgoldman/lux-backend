@@ -16,8 +16,8 @@ async function start() {
     await sequelize.sync({ alter: true });
     
     // 3) Levantar Express
-    app.listen(PORT, () => {
-      console.log(`🚀 Server corriendo en http://localhost:${PORT}`);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server corriendo en http://0.0.0.0:${PORT}`);
     });
   } catch (err) {
     console.error('❌ Error al inicializar la DB o el servidor:', err);
