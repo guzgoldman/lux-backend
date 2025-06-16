@@ -1,4 +1,3 @@
-// src/modules/preinscripcion/preinscripcion.controller.js
 const { sequelize, Persona, Direccion, Preinscripcion } = require('../../models');
 
 exports.createPreinscripcion = async (req, res, next) => {

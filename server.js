@@ -1,4 +1,3 @@
-// server.js
 require('dotenv').config();
 const app           = require('./src/config/app');
 const { sequelize } = require('./src/models');
@@ -8,12 +7,9 @@ const PORT = process.env.PORT || 3000;
 async function start() {
   try {
     await sequelize.authenticate();
-    console.log('Conectado a la base de datos');
-
-    // 2) Crear/Actualizar tablas según tus modelos
     // - force: true  => borra y vuelve a crear TODAS las tablas
     // - alter: true  => modifica las tablas para adaptarlas a los modelos
-    await sequelize.sync({ alter: true });
+    await sequelize.sync({  });
     
     // 3) Levantar Express
     app.listen(PORT, '0.0.0.0', () => {

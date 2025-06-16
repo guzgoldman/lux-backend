@@ -1,7 +1,9 @@
-const router = require('express').Router();
-const { getAll } = require('./userController');
+const express = require('express');
+const router = express.Router();
 
-// GET /api/users      <-- protegido
-router.get('/', getAll);
+const { listar } = require('./userController');
+const { verifyToken, requireRole } = require('../../middlewares/auth');
+
+router.get('/', verifyToken, requireRole('Administrador'), listar);
 
 module.exports = router;
