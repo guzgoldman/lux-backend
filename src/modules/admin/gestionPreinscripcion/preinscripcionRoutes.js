@@ -1,4 +1,3 @@
-// /modules/adminPreinscripcion/adminPreinscripcionRoutes.js
 const express = require('express');
 const router  = express.Router();
 
@@ -6,12 +5,12 @@ const {
   listarPreinscripcion,
   aceptar,
   ocultar
-} = require('./adminPreinscripcionController');
+} = require('./preinscripcionController');
 
 const {
   verifyToken,
   requireRole
-} = require('../../middlewares/auth');
+} = require('../../../middlewares/auth');
 
 router.get(
   '/',

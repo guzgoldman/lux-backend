@@ -1,6 +1,3 @@
-/**
- *  Admin » Preinscripción  – Controller
- */
 const bcrypt = require('bcrypt');
 const {
   Persona,
@@ -10,7 +7,7 @@ const {
   AlumnoCarrera,
   Preinscripcion,
   sequelize
-} = require('../../models');
+} = require('../../../models');
 
 exports.listarPreinscripcion = async (_req, res, next) => {
   try {
@@ -18,7 +15,6 @@ exports.listarPreinscripcion = async (_req, res, next) => {
       attributes: { exclude: ['createdAt', 'updatedAt'] },
 
       include: [
-        // 2) INNER JOIN a preinscripcion pendiente + visible
         {
           model: Preinscripcion,
           attributes: ['id', 'id_carrera', 'comentario'],
@@ -44,25 +40,20 @@ exports.aceptar = async (req, res, next) => {
       const persona = await Persona.findByPk(personaId, { transaction: t });
       if (!persona) throw new Error('Persona no encontrada');
 
-      // Buscar preinscripcion pendiente y visible
       const preinscripcion = await Preinscripcion.findOne({
         where: { id_persona: persona.id, estado: 'Pendiente', visible: 1 },
         transaction: t
       });
       if (!preinscripcion) throw new Error('No se encontró una preinscripción pendiente para esta persona.');
 
-      // Actualizar estado y visibilidad
       preinscripcion.estado = 'Aprobada';
       preinscripcion.visible = 0;
       await preinscripcion.save({ transaction: t });
 
-      // Buscar usuario existente para esa persona
       let usuario = await Usuario.findOne({ where: { id_persona: persona.id }, transaction: t });
 
       if (!usuario) {
-        // Autogenerar username y password igual al dni
         const dni = persona.dni;
-        // Validar que no exista otro usuario con ese username
         const existe = await Usuario.findOne({ where: { username: dni }, transaction: t });
         if (existe) throw new Error('Ya existe un usuario con ese DNI como username');
 
@@ -73,7 +64,6 @@ exports.aceptar = async (req, res, next) => {
         }, { transaction: t });
       }
 
-      // Rol "Alumno" (si no lo tiene, asignar)
       let rolAlumno = await Rol.findOne({ where: { nombre: 'Alumno' }, transaction: t });
       if (!rolAlumno) {
         rolAlumno = await Rol.create({ nombre: 'Alumno' }, { transaction: t });
@@ -90,7 +80,6 @@ exports.aceptar = async (req, res, next) => {
         );
       }
 
-      // Inscribirlo en la carrera (si ya está en esa carrera no volver a inscribirlo)
       const yaInscripto = await AlumnoCarrera.findOne({
         where: { id_persona: persona.id, id_carrera: carreraId },
         transaction: t

@@ -1,29 +1,28 @@
-const express                   = require('express');
-const cors                      = require('cors');
-const morgan                    = require('morgan');
-const authRoutes                = require('../modules/auth/authRoutes');
-const userRoutes                = require('../modules/user/userRoutes');
-const preinscripcionRoutes      = require('../modules/preinscripcion/preinscripcionRoutes');
-const adminPreinscripcionRoutes = require('../modules/adminPreinscripcion/adminPreinscripcionRoutes');
-const errorHandler              = require('../middlewares/errorHandler');
-const cookieParser              = require('cookie-parser');
+const express                     = require('express');
+const cors                        = require('cors');
+const morgan                      = require('morgan');
+const cookieParser                = require('cookie-parser');
+const authRoutes                  = require('../modules/auth/authRoutes');
+const userRoutes                  = require('../modules/user/userRoutes');
+const preinscripcionRoutes        = require('../modules/preinscripcion/preinscripcionRoutes');
+const gestionPreinscripcionRoutes = require('../modules/admin/gestionPreinscripcion/preinscripcionRoutes');
+const errorHandler                = require('../middlewares/errorHandler');
 
 const app = express();
 
 app.use(cookieParser());
-
 app.use(cors({
-  origin      : 'http://192.168.0.213:5173',  // URL del front
-  credentials : true                      // ← ¡importante!
+  origin      : 'http://192.168.0.213:5173',
+  credentials : true
 }));
 app.use(express.json());
 app.use(morgan('dev'));
 
 // Rutas
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/usuario', userRoutes);
 app.use('/api/preinscripcion', preinscripcionRoutes);
-app.use('/api/admin/preinscripcion', adminPreinscripcionRoutes);
+app.use('/api/admin/preinscripcion', gestionPreinscripcionRoutes);
 
 // Middleware de manejo de errores
 app.use(errorHandler);
