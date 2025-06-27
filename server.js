@@ -9,7 +9,7 @@ async function start() {
     await sequelize.authenticate();
     // - force: true  => borra y vuelve a crear TODAS las tablas
     // - alter: true  => modifica las tablas para adaptarlas a los modelos
-    await sequelize.sync({  });
+    // await sequelize.sync({ alter: true });
     
     // 3) Levantar Express
     app.listen(PORT, '0.0.0.0', () => {

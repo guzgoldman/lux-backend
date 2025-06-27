@@ -1,4 +1,3 @@
-// models/alerta.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'alerta',
@@ -9,7 +8,7 @@ module.exports = (sequelize, DataTypes) => {
       mensaje:                  { type: DataTypes.TEXT, allowNull: false },
       fecha_creacion:           { type: DataTypes.DATE, defaultValue: sequelize.literal('CURRENT_TIMESTAMP') },
       fecha_vencimiento:        { type: DataTypes.DATE },
-      estado:                   { type: DataTypes.STRING(10), allowNull: false } // Activa | Archivada
+      estado:                   { type: DataTypes.STRING(10), allowNull: false }
     },
     {
       tableName: 'alerta',

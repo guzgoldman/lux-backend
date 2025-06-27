@@ -1,4 +1,3 @@
-// models/certificado.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'certificado',

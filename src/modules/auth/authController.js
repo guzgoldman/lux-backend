@@ -57,7 +57,7 @@ exports.seleccionarRol = (req, res) => {
     }
 
     const token2 = jwt.sign(
-      { id: payload1.id, username: payload1.username, rol: [rol] },
+      { id: payload1.id, username: payload1.username, rol: rol },
       process.env.JWT_SECRET,
       { expiresIn: '8h' }
     );

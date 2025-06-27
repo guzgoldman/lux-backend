@@ -1,4 +1,3 @@
-// models/clase_tema.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'clase_tema',

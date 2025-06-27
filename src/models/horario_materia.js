@@ -1,4 +1,3 @@
-// models/horario_materia.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'horario_materia',

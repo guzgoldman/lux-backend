@@ -1,4 +1,3 @@
-// models/plan_estudio.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'plan_estudio',

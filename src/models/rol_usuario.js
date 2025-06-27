@@ -1,4 +1,3 @@
-// models/rol_usuario.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'rol_usuario',

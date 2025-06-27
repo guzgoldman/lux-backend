@@ -22,13 +22,14 @@ exports.verifyToken = (req, res, next) => {
 };
 
 exports.requireRole = (...allowedRoles) => (req, res, next) => {
-  if (!req.user?.roles) {
+  const usuarioRol = req.user?.rol;
+
+  if (!usuarioRol) {
     return res.status(403).json({ message: 'Acceso denegado' });
   }
 
-  const tieneRol = req.user.roles.some((r) => allowedRoles.includes(r));
-  if (!tieneRol) {
-    return res.status(403).json({ message: 'No tenés permisos' });
+  if (!allowedRoles.includes(usuarioRol)) {
+    return res.status(403).json({ message: 'No tenés permisos suficientes' });
   }
 
   next();

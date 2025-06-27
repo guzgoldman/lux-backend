@@ -11,7 +11,7 @@ const {
 const {
     verifyToken,
     requireRole
-} = require('../../../middlewares/auth');
+} = require('../../../../middlewares/auth');
 
 router.post(
     '/correlativas',

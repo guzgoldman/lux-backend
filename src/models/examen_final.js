@@ -1,11 +1,10 @@
-// models/examen_final.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'examen_final',
     {
       id:                           { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
       id_materia_plan_ciclo_lectivo:{ type: DataTypes.INTEGER, allowNull: false },
-      tipo:                         { type: DataTypes.STRING(20), allowNull: false }, // Parcial|Final|Recuperatorio
+      tipo:                         { type: DataTypes.STRING(20), allowNull: false },
       fecha:                        { type: DataTypes.DATE },
       temario:                      { type: DataTypes.TEXT, allowNull: false },
       estado:                       { type: DataTypes.STRING(20), defaultValue: 'PENDIENTE' },

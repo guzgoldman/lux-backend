@@ -14,29 +14,31 @@ const {
 } = require('../../../../middlewares/auth');
 
 router.post(
-    '/materias',
+    '/registrar-materia',
     verifyToken,
     requireRole('Administrador'),
     registrarMateriaGenerica
 );
 
 router.get(
-    '/materias',
+    '/listar-materias',
     verifyToken,
     requireRole('Administrador'),
     listarMateriasGenericas
 );
 
 router.get(
-    '/materias/:nombre',
+    '/:nombre',
     verifyToken,
     requireRole('Administrador'),
     buscarMateriaPorNombre
 );
 
 router.put(
-    '/materias/:materiaId',
+    '/:materiaId',
     verifyToken,
     requireRole('Administrador'),
     modificarMateriaGenerica
 );
+
+module.exports = router;

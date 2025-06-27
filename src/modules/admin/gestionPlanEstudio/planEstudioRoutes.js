@@ -13,25 +13,25 @@ const {
 } = require('../../../middlewares/auth');
 
 router.post(
-    '/:carreraId/planes-estudio',
+    '/:carreraId/registrar-plan-estudio',
     verifyToken,
     requireRole('Administrador'),
     registrarPlanEstudio);
 
 router.get(
-    '/planes-estudio',
+    '/listar-planes-estudio',
     verifyToken,
     requireRole('Administrador'),
     listarPlanesEstudio);
 
 router.put(
-    '/planes-estudio/:planEstudioId',
+    '/:planEstudioId/modificar',
     verifyToken,
     requireRole('Administrador'),
     modificarPlanEstudio);
 
 router.patch(
-    '/planes-estudio/:planEstudioId/estado',
+    '/:planEstudioId/cambiar-estado',
     verifyToken,
     requireRole('Administrador'),
     cambiarEstadoPlanEstudio);

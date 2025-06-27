@@ -1,4 +1,3 @@
-// models/asistencia.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'asistencia',
@@ -6,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
       id:                        { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
       id_clase:                  { type: DataTypes.INTEGER },
       id_usuario_alumno:         { type: DataTypes.INTEGER },
-      estado_asistencia:         { type: DataTypes.STRING(20) }, // PRESENTE | AUSENTE
+      estado_asistencia:         { type: DataTypes.STRING(20) },
       id_usuario_profesor_registro:{type: DataTypes.INTEGER },
       hora_registro:             { type: DataTypes.DATE, defaultValue: sequelize.literal('CURRENT_TIMESTAMP') },
       creado_por:                { type: DataTypes.INTEGER, allowNull: false },

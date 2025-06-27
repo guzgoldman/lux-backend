@@ -13,20 +13,20 @@ const {
 } = require('../../../../middlewares/auth');
 
 router.post(
-    '/:planEstudioId/materias',
+    '/:planEstudioId/registrar-materia',
      verifyToken, 
      requireRole('Administrador'), 
      registrarMateriaPlan
 );
 
 router.get(
-    '/:planEstudioId/materias',
+    '/:planEstudioId/listar-materias',
     verifyToken,
     requireRole('Administrador'),
     listarMateriasPlan
 );
 router.put(
-    '/materias/:materiaPlanId',
+    '/:materiaPlanId',
     verifyToken,
     requireRole('Administrador'),
     modificarMateriaPlan

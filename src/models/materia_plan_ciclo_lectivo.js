@@ -1,4 +1,3 @@
-// models/materia_plan_ciclo_lectivo.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'materia_plan_ciclo_lectivo',

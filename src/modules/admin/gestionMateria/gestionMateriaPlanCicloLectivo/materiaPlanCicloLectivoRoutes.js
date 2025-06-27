@@ -14,14 +14,14 @@ const {
 } = require('../../../../middlewares/auth');
 
 router.post(
-    '/', 
+    '/registrar-materia', 
     verifyToken, 
     requireRole('Administrador'), 
     registrarMateriaPlanCicloLectivo
 );
 
 router.get(
-    '/', 
+    '/listar-materias', 
     verifyToken, 
     requireRole('Administrador'), 
     listarMateriasPlanCicloLectivo

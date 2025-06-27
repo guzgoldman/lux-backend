@@ -1,4 +1,3 @@
-// models/inscripcion_materia.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'inscripcion_materia',
@@ -24,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
       timestamps: false,
       indexes: [
         {
-          name: 'uniq_insc_user_mat',   // nombre corto (<64 chars)
+          name: 'uniq_insc_user_mat',
           unique: true,
           fields: [
             'id_usuario_alumno',

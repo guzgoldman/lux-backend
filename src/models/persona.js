@@ -1,4 +1,3 @@
-// models/persona.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'persona',
