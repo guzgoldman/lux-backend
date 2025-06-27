@@ -1,24 +1,81 @@
-const { Materia } = require('../../../models');
+const { Materia, MateriaPlan, PlanEstudio, Carrera } = require('../../../../models');
+const { Op, fn, col, where } = require('sequelize');
 
 exports.registrarMateriaGenerica = async (req, res, next) => {
   const { nombre } = req.body;
 
+  if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
+    return res.status(400).json({ error: 'El campo "nombre" es obligatorio.' });
+  }
+
   try {
-    const nuevaMateria = await Materia.create({ nombre });
-    res.status(201).json(nuevaMateria);
+    const existente = await Materia.findOne({
+      where: where(
+        fn('lower', col('nombre')),
+        nombre.trim().toLowerCase()
+      )
+    });
+
+    if (existente) {
+      return res.status(409).json({ error: 'Ya existe una materia con ese nombre.' });
+    }
+
+    const nuevaMateria = await Materia.create({ nombre: nombre.trim() });
+    return res.status(201).json(nuevaMateria);
   } catch (err) {
     next(err);
   }
-}
+};
 
 exports.listarMateriasGenericas = async (req, res, next) => {
   try {
-    const materias = await Materia.findAll();
-    res.status(200).json(materias);
+    const materias = await Materia.findAll({
+      order: [['nombre', 'ASC']],
+      include: [
+        {
+          model: MateriaPlan,
+          as: "materiaPlans",
+          include: [
+            {
+              model: PlanEstudio,
+              as: "planEstudio",
+              include: [
+                {
+                  model: Carrera,
+                  as: "carrera"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+
+    // Mapear materias a objeto más plano, por materia individual
+    const resultado = materias.map(m => ({
+      id: m.id,
+      nombre: m.nombre,
+      activa: m.activa,
+      plan_estudio: (m.MateriaPlans || []).map(mp => mp.PlanEstudio ? {
+        id: mp.PlanEstudio.id,
+        nombre: mp.PlanEstudio.nombre
+      } : null).filter(x => x !== null),
+      carrera: Array.from(new Set(
+        (m.MateriaPlans || [])
+          .map(mp => mp.PlanEstudio?.Carrera)
+          .filter(c => c)
+          .map(c => `${c.id}::${c.nombre}`)
+      )).map(str => {
+        const [id, nombre] = str.split('::');
+        return { id: +id, nombre };
+      })
+    }));
+
+    return res.status(200).json(resultado);
   } catch (err) {
     next(err);
   }
-}
+};
 
 // Esta posiblemente no sea útil, ya que para mostrarla en un select como opción también necesito el ID que me da la función anterior.
 exports.buscarMateriaPorNombre = async (req, res, next) => {

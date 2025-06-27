@@ -3,7 +3,7 @@ const {
     Correlativa,
     Materia,
     PlanEstudio
-} = require('../../../models');
+} = require('../../../../models');
 
 exports.registrarCorrelativa = async (req, res, next) => {
     const { materiaId, correlativaId } = req.body;

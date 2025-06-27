@@ -1,4 +1,3 @@
-// models/evaluacion_tipo.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'evaluacion_tipo',

@@ -2,7 +2,7 @@ const {
     Materia,
     MateriaPlan,
     PlanEstudio
-} = require('../../../models');
+} = require('../../../../models');
 
 exports.registrarMateriaPlan = async (req, res, next) => {
     const { planEstudioId } = req.params;

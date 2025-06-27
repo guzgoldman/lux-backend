@@ -1,4 +1,3 @@
-// models/historial_direccion.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'historial_direccion',

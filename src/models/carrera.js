@@ -1,4 +1,3 @@
-// models/carrera.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'carrera',

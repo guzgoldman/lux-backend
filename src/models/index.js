@@ -132,18 +132,16 @@ HistorialDireccion.belongsTo(Direccion, { foreignKey: 'id_direccion',
 HistorialDireccion.belongsTo(Usuario,   { foreignKey: 'realizado_por' });
 
 /* ==== Carrera / PlanEstudio ==== */
-PlanEstudio.belongsTo(Carrera, { foreignKey: 'id_carrera',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-Carrera.hasMany(PlanEstudio,   { foreignKey: 'id_carrera' });
+Carrera.hasMany(PlanEstudio,   { foreignKey: 'id_carrera', as:"planesEstudio" });
 
 /* ==== Materia / MateriaPlan / MateriaPlanCicloLectivo ==== */
 MateriaPlan.belongsTo(Materia,      { foreignKey: 'id_materia',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-Materia.hasMany(MateriaPlan,        { foreignKey: 'id_materia' });
+  onDelete: 'CASCADE', onUpdate: 'CASCADE', as:"materia" });
+Materia.hasMany(MateriaPlan, { foreignKey: 'id_materia', as:"materiaPlans" });
 
 MateriaPlan.belongsTo(PlanEstudio,  { foreignKey: 'id_plan_estudio',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-PlanEstudio.hasMany(MateriaPlan,    { foreignKey: 'id_plan_estudio' });
+  onDelete: 'CASCADE', onUpdate: 'CASCADE', as: "planEstudio" });
+PlanEstudio.hasMany(MateriaPlan,    { foreignKey: 'id_plan_estudio', as:"materiaPlans" });
 
 MateriaPlanCicloLectivo.belongsTo(MateriaPlan, { foreignKey: 'id_materia_plan',
   onDelete: 'CASCADE', onUpdate: 'CASCADE' });
@@ -273,6 +271,27 @@ Persona.hasMany(Preinscripcion, {
   foreignKey: 'id_persona',
   onDelete: 'CASCADE',
   onUpdate: 'CASCADE'
+});
+
+Materia.belongsToMany(PlanEstudio, {
+  through: MateriaPlan,
+  foreignKey: 'id_materia',
+  otherKey: 'id_plan_estudio',
+  onDelete: 'CASCADE', onUpdate: 'CASCADE'
+});
+
+// PlanEstudio ↔ Carrera (ya lo tienes como belongsTo pero puedes renombrar el alias)
+PlanEstudio.belongsTo(Carrera, {
+  foreignKey: 'id_carrera',
+  as:"carrera",
+  onDelete: 'CASCADE', onUpdate: 'CASCADE'
+});
+
+PlanEstudio.belongsToMany(Materia, {
+  through: MateriaPlan,
+  foreignKey: 'id_plan_estudio',
+  otherKey: 'id_materia',
+  onDelete: 'CASCADE', onUpdate: 'CASCADE'
 });
 
 /* -------------------------------------------------------------------------- */

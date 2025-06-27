@@ -3,7 +3,7 @@ const {
     MateriaPlan,
     PlanEstudio,
     MateriaPlanCicloLectivo,
-} = require('../../../models');
+} = require('../../../../models');
 
 exports.registrarMateriaPlanCicloLectivo = async (req, res, next) => {
     const { materiaPlanId, cicloLectivo, fechaInicio, fechaCierre, tipoAprobacion } = req.body;

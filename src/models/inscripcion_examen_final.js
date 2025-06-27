@@ -1,4 +1,3 @@
-// models/inscripcion_examen_final.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'inscripcion_examen_final',

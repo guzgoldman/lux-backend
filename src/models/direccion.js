@@ -1,4 +1,3 @@
-// models/direccion.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'direccion',

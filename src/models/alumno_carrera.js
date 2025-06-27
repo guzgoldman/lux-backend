@@ -1,4 +1,3 @@
-// models/alumno_carrera.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'alumno_carrera',

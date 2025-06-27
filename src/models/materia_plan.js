@@ -1,4 +1,3 @@
-// models/materia_plan.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'materia_plan',
@@ -9,7 +8,6 @@ module.exports = (sequelize, DataTypes) => {
       horas_catedra:    { type: DataTypes.INTEGER, allowNull: false },
       duracion:         { type: DataTypes.STRING(10), allowNull: false }, // Semestral|Anual
       anio_carrera:     { type: DataTypes.INTEGER, allowNull: false },
-      descripcion:      { type: DataTypes.TEXT }
     },
     {
       tableName: 'materia_plan',

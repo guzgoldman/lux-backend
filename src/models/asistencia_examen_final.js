@@ -1,4 +1,3 @@
-// models/asistencia_examen_final.js
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     'asistencia_examen_final',
