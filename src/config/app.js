@@ -12,6 +12,7 @@ const gestionMateriaPlanCicloLectivoRoutes = require('../modules/admin/gestionMa
 const gestionPlanEstudiosRoutes = require('../modules/admin/gestionPlanEstudio/planEstudioRoutes');
 const gestionCorrelativasRoutes = require('../modules/admin/gestionMateria/gestionCorrelativa/correlativaRoutes');
 const errorHandler                = require('../middlewares/errorHandler');
+const gestionCarreraRoutes = require('../modules/admin/gestionCarrera/carreraRoutes')
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/usuario', userRoutes);
 app.use('/api/preinscripcion', preinscripcionRoutes);
 app.use('/api/admin/preinscripcion', gestionPreinscripcionRoutes);
+app.use('/api/admin/carrera', gestionCarreraRoutes);
 app.use('/api/admin/materia', gestionMateriaGenericaRoutes);
 app.use('/api/admin/materia/materia-plan', gestionMateriaPlanRoutes);
 app.use('/api/admin/materia/materia-plan-ciclo', gestionMateriaPlanCicloLectivoRoutes);

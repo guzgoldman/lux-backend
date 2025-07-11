@@ -21,11 +21,11 @@ exports.listarCarreras = async (req, res, next) => {
 }
 
 exports.modificarCarrera = async (req, res, next) => {
-    const { id } = req.params;
+    const { carreraId } = req.params;
     const { nombre, duracion } = req.body;
 
     try {
-        const carrera = await Carrera.findByPk(id);
+        const carrera = await Carrera.findByPk(carreraId);
         if (!carrera) {
             return res.status(404).json({ error: 'Carrera no encontrada' });
         }

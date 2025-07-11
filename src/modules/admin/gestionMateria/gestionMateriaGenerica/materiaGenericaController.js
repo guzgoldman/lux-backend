@@ -1,7 +1,7 @@
 const { Materia, MateriaPlan, PlanEstudio, Carrera } = require('../../../../models');
 const { Op, fn, col, where } = require('sequelize');
 
-exports.registrarMateriaGenerica = async (req, res, next) => {
+exports.registrarMateria = async (req, res, next) => {
   const { nombre } = req.body;
 
   if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
@@ -27,7 +27,7 @@ exports.registrarMateriaGenerica = async (req, res, next) => {
   }
 };
 
-exports.listarMateriasGenericas = async (req, res, next) => {
+exports.listarMaterias = async (req, res, next) => {
   try {
     const materias = await Materia.findAll({
       order: [['nombre', 'ASC']],
@@ -51,7 +51,6 @@ exports.listarMateriasGenericas = async (req, res, next) => {
       ]
     });
 
-    // Mapear materias a objeto más plano, por materia individual
     const resultado = materias.map(m => ({
       id: m.id,
       nombre: m.nombre,
@@ -77,27 +76,12 @@ exports.listarMateriasGenericas = async (req, res, next) => {
   }
 };
 
-// Esta posiblemente no sea útil, ya que para mostrarla en un select como opción también necesito el ID que me da la función anterior.
-exports.buscarMateriaPorNombre = async (req, res, next) => {
-  const { nombre } = req.params;
-
-  try {
-    const materia = await Materia.findOne({ where: { nombre } });
-    if (!materia) {
-      return res.status(404).json({ error: 'Materia no encontrada' });
-    }
-    res.status(200).json(materia);
-  } catch (err) {
-    next(err);
-  }
-}
-
-exports.modificarMateriaGenerica = async (req, res, next) => {
-  const { materiaId } = req.params;
+exports.editarMateria = async (req, res, next) => {
+  const { id } = req.params;
   const { nombre } = req.body;
 
   try {
-    const materia = await Materia.findByPk(materiaId);
+    const materia = await Materia.findByPk(id);
     if (!materia) {
       return res.status(404).json({ error: 'Materia no encontrada' });
     }

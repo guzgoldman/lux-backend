@@ -9,20 +9,41 @@ const {
   sequelize
 } = require('../../../models');
 
-exports.listarPreinscripcion = async (_req, res, next) => {
-  try {
-    const personas = await Persona.findAll({
-      attributes: { exclude: ['createdAt', 'updatedAt'] },
+const { Op } = require('sequelize');
 
-      include: [
-        {
-          model: Preinscripcion,
-          attributes: ['id', 'id_carrera', 'comentario'],
-          where: { estado: 'Pendiente', visible: 1 },
-          required: true 
-        }
-      ],
-      order: [['fecha_registro', 'ASC']]
+exports.listarPreinscripcion = async (req, res, next) => {
+  try {
+    const { estado, visible, search } = req.query;
+
+    // Filtros dinámicos para Preinscripcion
+    const preWhere = {};
+    if (estado)                preWhere.estado  = estado;
+    if (visible === '0' || visible === '1') preWhere.visible = Number(visible);
+
+    // Filtro dinámico para Persona (nombre, apellido, dni)
+    const personaWhere = {};
+    if (search) {
+      const term = `%${search}%`;
+      personaWhere[Op.or] = [
+        { nombre:   { [Op.like]: term } },
+        { apellido: { [Op.like]: term } },
+        { dni:      { [Op.like]: term } },
+      ];
+    }
+
+    const personas = await Persona.findAll({
+      where: personaWhere,
+      attributes: { exclude: ['createdAt','updatedAt'] },
+      include: [{
+        model: Preinscripcion,
+        attributes: [
+          'id','id_carrera','comentario',
+          'estado','visible','fecha_creacion'
+        ],
+        where: preWhere,
+        required: true
+      }],
+      order: [['fecha_registro','ASC']]
     });
 
     res.json(personas);

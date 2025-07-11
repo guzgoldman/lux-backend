@@ -13,21 +13,21 @@ const {
 } = require('../../../middlewares/auth');
 
 router.post(
-    '/carreras',
+    '/registrar-carrera',
     verifyToken,
     requireRole('Administrador'),
     registrarCarrera
 );
 
 router.get(
-    '/carreras',
+    '/listar-carreras',
     verifyToken,
     requireRole('Administrador'),
     listarCarreras
 );
 
 router.put(
-    '/carreras/:id',
+    '/:carreraId',
     verifyToken,
     requireRole('Administrador'),
     modificarCarrera

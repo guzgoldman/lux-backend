@@ -2,10 +2,9 @@ const express = require('express');
 const router = express.Router();
 
 const {
-  registrarMateriaGenerica,
-  listarMateriasGenericas,
-  modificarMateriaGenerica,
-  buscarMateriaPorNombre
+  registrarMateria,
+  listarMaterias,
+  editarMateria,
 } = require('./materiaGenericaController');
 
 const {
@@ -17,28 +16,21 @@ router.post(
     '/registrar-materia',
     verifyToken,
     requireRole('Administrador'),
-    registrarMateriaGenerica
+    registrarMateria
 );
 
 router.get(
     '/listar-materias',
     verifyToken,
     requireRole('Administrador'),
-    listarMateriasGenericas
-);
-
-router.get(
-    '/:nombre',
-    verifyToken,
-    requireRole('Administrador'),
-    buscarMateriaPorNombre
+    listarMaterias
 );
 
 router.put(
-    '/:materiaId',
+    '/:id',
     verifyToken,
     requireRole('Administrador'),
-    modificarMateriaGenerica
+    editarMateria
 );
 
 module.exports = router;
