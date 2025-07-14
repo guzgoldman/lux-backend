@@ -11,6 +11,7 @@ const gestionMateriaPlanRoutes = require('../modules/admin/gestionMateria/gestio
 const gestionMateriaPlanCicloLectivoRoutes = require('../modules/admin/gestionMateria/gestionMateriaPlanCicloLectivo/materiaPlanCicloLectivoRoutes');
 const gestionPlanEstudiosRoutes = require('../modules/admin/gestionPlanEstudio/planEstudioRoutes');
 const gestionCorrelativasRoutes = require('../modules/admin/gestionMateria/gestionCorrelativa/correlativaRoutes');
+const gestionProfesorRoutes = require('../modules/admin/gestionProfesor/profesorRoutes')
 const errorHandler                = require('../middlewares/errorHandler');
 const gestionCarreraRoutes = require('../modules/admin/gestionCarrera/carreraRoutes')
 
@@ -35,6 +36,7 @@ app.use('/api/admin/materia/materia-plan', gestionMateriaPlanRoutes);
 app.use('/api/admin/materia/materia-plan-ciclo', gestionMateriaPlanCicloLectivoRoutes);
 app.use('/api/admin/plan-estudio', gestionPlanEstudiosRoutes);
 app.use('/api/admin/materia-correlativa', gestionCorrelativasRoutes);
+app.use('/api/admin/profesor', gestionProfesorRoutes);
 
 // Middleware de manejo de errores
 app.use(errorHandler);

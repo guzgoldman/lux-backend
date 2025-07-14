@@ -38,7 +38,7 @@ exports.login = async (req, res, next) => {
       maxAge   : 15 * 60 * 1000         // 15 min
     });
 
-    res.json({ roles: roleNames });
+    res.json({ roles: roleNames, needsRoleSelection: roleNames.length > 1 });
   } catch (err) {
     next(err);
   }
