@@ -1,7 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt    = require('jsonwebtoken');
 require('dotenv').config();
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 const { Usuario } = require('../../models');
 

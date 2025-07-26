@@ -94,38 +94,9 @@ const HistorialAsistenciaExamenFinal  = historialAsistenciaExamenFinalModel(sequ
 
 const HorarioMateria                  = horarioMateriaModel(sequelize, DataTypes);
 
-/* -------------------------------------------------------------------------- */
-/*                          Definición de asociaciones                        */
-/* -------------------------------------------------------------------------- */
 
-/* ==== Usuario & Rol (N-a-N vía rol_usuario) ==== */
-Usuario.belongsToMany(Rol, { through: RolUsuario, foreignKey: 'id_usuario', otherKey: 'id_rol',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-Rol.belongsToMany(Usuario, { through: RolUsuario, foreignKey: 'id_rol', otherKey: 'id_usuario',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
 
-/* ---- Usuario / RolUsuario / Rol (asociaciones faltantes) ---- */
-RolUsuario.belongsTo(Usuario, { foreignKey: 'id_usuario',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-RolUsuario.belongsTo(Rol,     { foreignKey: 'id_rol',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-
-Usuario.hasMany(RolUsuario,   { foreignKey: 'id_usuario',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-Rol.hasMany(RolUsuario,       { foreignKey: 'id_rol',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-
-/* ==== Persona / Usuario / AlumnoTipo ==== */
-Usuario.belongsTo(Persona,      { foreignKey: 'id_persona' });
-
-/* ---- Persona ↔ Usuario  ---- */
-Persona.hasOne(Usuario,  { foreignKey: 'id_persona',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });   // 1 a 1   (lo habitual)
-
-/* ==== Dirección & su historial ==== */
-Direccion.belongsTo(Persona,    { foreignKey: 'id_persona',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-Persona.hasMany(Direccion,      { foreignKey: 'id_persona' });
+Persona.hasMany(Direccion,      { foreignKey: 'id_persona', as: 'direcciones' });
 
 HistorialDireccion.belongsTo(Direccion, { foreignKey: 'id_direccion',
   onDelete: 'CASCADE', onUpdate: 'CASCADE' });
@@ -174,23 +145,14 @@ ProfesorMateria.belongsTo(Usuario,               { foreignKey: 'id_usuario_profe
 ProfesorMateria.belongsTo(MateriaPlanCicloLectivo, { foreignKey: 'id_materia_plan_ciclo_lectivo',
   onDelete: 'CASCADE', onUpdate: 'CASCADE' });
 
-/* ==== AlumnoCarrera ==== */
-AlumnoCarrera.belongsTo(Persona, { foreignKey: 'id_persona',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-AlumnoCarrera.belongsTo(Carrera, { foreignKey: 'id_carrera',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
 AlumnoCarrera.belongsTo(AlumnoTipo, { foreignKey: 'id_tipo_alumno',
   onDelete: 'CASCADE', onUpdate: 'CASCADE' });
 
-/* ==== Inscripción a Materia & su historial ==== */
-InscripcionMateria.belongsTo(Usuario,               { foreignKey: 'id_usuario_alumno',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-InscripcionMateria.belongsTo(MateriaPlanCicloLectivo,{ foreignKey: 'id_materia_plan_ciclo_lectivo',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
+Usuario.hasMany(AlumnoCarrera,    { foreignKey: 'id_persona',   as: 'carreras' });
 
 HistorialInscripcionMateria.belongsTo(Usuario,               { foreignKey: 'realizado_por' });
 HistorialInscripcionMateria.belongsTo(InscripcionMateria, {
-  foreignKey: ['id_usuario_alumno', 'id_materia_plan_ciclo_lectivo']  // clave compuesta
+  foreignKey: ['id_usuario_alumno', 'id_materia_plan_ciclo_lectivo']
 });
 
 /* ==== Inscripción a Examen Final & su historial ==== */
@@ -221,9 +183,6 @@ ClaseTema.belongsTo(Clase, { foreignKey: 'id_clase',
 ClaseTema.belongsTo(Tema,  { foreignKey: 'id_tema',
   onDelete: 'CASCADE', onUpdate: 'CASCADE' });
 
-/* ==== Evaluaciones ==== */
-Evaluacion.belongsTo(InscripcionMateria, { foreignKey: 'id_inscripcion_materia',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
 Evaluacion.belongsTo(EvaluacionTipo,     { foreignKey: 'id_evaluacion_tipo' });
 
 /* ==== Asistencias a clase & su historial ==== */
@@ -258,10 +217,6 @@ HistorialAsistenciaExamenFinal.belongsTo(AsistenciaExamenFinal, { foreignKey: 'i
   onDelete: 'CASCADE', onUpdate: 'CASCADE' });
 HistorialAsistenciaExamenFinal.belongsTo(Usuario, { foreignKey: 'realizado_por' });
 
-/* ==== Horarios ==== */
-HorarioMateria.belongsTo(MateriaPlanCicloLectivo, { foreignKey: 'id_materia_plan_ciclo_lectivo',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-
 Preinscripcion.belongsTo(Persona, { foreignKey: 'id_persona',
   onDelete: 'CASCADE', onUpdate: 'CASCADE' });
 Preinscripcion.belongsTo(Carrera, { foreignKey: 'id_carrera',
@@ -293,6 +248,149 @@ PlanEstudio.belongsToMany(Materia, {
   otherKey: 'id_materia',
   onDelete: 'CASCADE', onUpdate: 'CASCADE'
 });
+
+/* ==== Usuario ↔ Persona (1:1) ==== */
+Usuario.belongsTo(Persona, { 
+  foreignKey: 'id_persona', 
+  as: 'persona',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+Persona.hasOne(Usuario, { 
+  foreignKey: 'id_persona', 
+  as: 'usuario',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+
+Direccion.belongsTo(Persona, { 
+  foreignKey: 'id_persona', 
+  as: 'persona',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+
+/* ==== Persona → AlumnoCarrera (1:N) ==== */
+Persona.hasMany(AlumnoCarrera, { 
+  foreignKey: 'id_persona', 
+  as: 'carreras',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+AlumnoCarrera.belongsTo(Persona, { 
+  foreignKey: 'id_persona', 
+  as: 'persona',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+
+/* ==== AlumnoCarrera → Carrera (N:1) ==== */
+AlumnoCarrera.belongsTo(Carrera, { 
+  foreignKey: 'id_carrera', 
+  as: 'carrera',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+Carrera.hasMany(AlumnoCarrera, { 
+  foreignKey: 'id_carrera', 
+  as: 'inscripcionesCarrera',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+
+/* ==== Usuario → InscripcionMateria (1:N) ==== */
+Usuario.hasMany(InscripcionMateria, { 
+  foreignKey: 'id_usuario_alumno', 
+  as: 'inscripciones',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+InscripcionMateria.belongsTo(Usuario, { 
+  foreignKey: 'id_usuario_alumno', 
+  as: 'usuario',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+
+/* ==== InscripcionMateria → MateriaPlanCicloLectivo (N:1) ==== */
+MateriaPlanCicloLectivo.hasMany(InscripcionMateria, { 
+  foreignKey: 'id_materia_plan_ciclo_lectivo', 
+  as: 'inscripcionesCiclo',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+InscripcionMateria.belongsTo(MateriaPlanCicloLectivo, { 
+  foreignKey: 'id_materia_plan_ciclo_lectivo', 
+  as: 'ciclo',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+
+/* ==== MateriaPlanCicloLectivo → Materia (N:1) ==== */
+Materia.hasMany(MateriaPlanCicloLectivo, { 
+  foreignKey: 'id_materia_plan', 
+  as: 'planesCiclo',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+MateriaPlanCicloLectivo.belongsTo(Materia, { 
+  foreignKey: 'id_materia_plan', 
+  as: 'materia',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+
+/* ==== MateriaPlanCicloLectivo → HorarioMateria (1:N) ==== */
+MateriaPlanCicloLectivo.hasMany(HorarioMateria, { 
+  foreignKey: 'id_materia_plan_ciclo_lectivo', 
+  as: 'horarios',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+HorarioMateria.belongsTo(MateriaPlanCicloLectivo, { 
+  foreignKey: 'id_materia_plan_ciclo_lectivo', 
+  as: 'ciclo',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+
+/* ==== InscripcionMateria → Evaluacion (1:N) ==== */
+InscripcionMateria.hasMany(Evaluacion, { 
+  foreignKey: 'id_inscripcion_materia', 
+  as: 'evaluaciones',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+Evaluacion.belongsTo(InscripcionMateria, { 
+  foreignKey: 'id_inscripcion_materia', 
+  as: 'inscripcion',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+
+/* ==== Usuario ↔ Rol (N:M vía RolUsuario) ==== */
+Usuario.belongsToMany(Rol, { 
+  through: RolUsuario, 
+  foreignKey: 'id_usuario', 
+  otherKey: 'id_rol',
+  as: 'roles',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+Rol.belongsToMany(Usuario, { 
+  through: RolUsuario, 
+  foreignKey: 'id_rol', 
+  otherKey: 'id_usuario',
+  as: 'usuarios',
+  onDelete: 'CASCADE', 
+  onUpdate: 'CASCADE'
+});
+
+/* Asociaciones intermedias para RolUsuario */
+RolUsuario.belongsTo(Usuario, { foreignKey: 'id_usuario' });
+RolUsuario.belongsTo(Rol,     { foreignKey: 'id_rol' });
+Usuario.hasMany(RolUsuario,   { foreignKey: 'id_usuario' });
+Rol.hasMany(RolUsuario,       { foreignKey: 'id_rol' });
 
 /* -------------------------------------------------------------------------- */
 /*                            Exportación conjunta                            */

@@ -1,6 +1,6 @@
-const router = require('express').Router();
-const { createPreinscripcion } = require('./preinscripcionController');
+const router = require("express").Router();
+const { createPreinscripcion } = require("./preinscripcionController");
 
-router.post('/', createPreinscripcion);
+router.post("/", createPreinscripcion);
 
 module.exports = router;
