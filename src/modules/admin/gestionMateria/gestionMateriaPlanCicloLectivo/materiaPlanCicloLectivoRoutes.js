@@ -1,44 +1,41 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
 const {
-    registrarMateriaPlanCicloLectivo,
-    listarMateriasPlanCicloLectivo,
-    modificarMateriaPlanCicloLectivo,
-    buscarMateriaPlanCicloLectivoPorId
-} = require('./materiaPlanCicloLectivoController');
+  registrarMateriaPlanCicloLectivo,
+  listarMateriasPlanCicloLectivo,
+  modificarMateriaPlanCicloLectivo,
+  detalleMateriaPlanCicloLectivo,
+} = require("./materiaPlanCicloLectivoController");
 
-const {
-    verifyToken,
-    requireRole
-} = require('../../../../middlewares/auth');
+const { verifyToken, requireRole } = require("../../../../middlewares/auth");
 
 router.post(
-    '/registrar-materia', 
-    verifyToken, 
-    requireRole('Administrador'), 
-    registrarMateriaPlanCicloLectivo
+  "/registrar-materia",
+  verifyToken,
+  requireRole("Administrador"),
+  registrarMateriaPlanCicloLectivo
 );
 
 router.get(
-    '/listar-materias', 
-    verifyToken, 
-    requireRole('Administrador'), 
-    listarMateriasPlanCicloLectivo
+  "/listar-materias",
+  verifyToken,
+  requireRole("Administrador"),
+  listarMateriasPlanCicloLectivo
 );
 
 router.put(
-    '/:id', 
-    verifyToken, 
-    requireRole('Administrador'), 
-    modificarMateriaPlanCicloLectivo
+  "/modificar-materia/:id",
+  verifyToken,
+  requireRole("Administrador"),
+  modificarMateriaPlanCicloLectivo
 );
 
 router.get(
-    '/:id', 
-    verifyToken, 
-    requireRole('Administrador'), 
-    buscarMateriaPlanCicloLectivoPorId
+    '/:id/detalle',
+    verifyToken,
+    requireRole('Administrador'),
+    detalleMateriaPlanCicloLectivo
 );
 
 module.exports = router;

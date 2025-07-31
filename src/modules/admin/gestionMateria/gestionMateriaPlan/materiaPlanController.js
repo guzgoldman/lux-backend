@@ -6,23 +6,12 @@ const {
 
 exports.registrarMateriaPlan = async (req, res, next) => {
     const { planEstudioId } = req.params;
-    const { materiaGenericaNombre, horasCatedra, duracion, anioCarrera } = req.body;
+    const { idMateria, horasCatedra, duracion, anioCarrera } = req.body;
     
     try {
-        const planEstudio = await PlanEstudio.findByPk(planEstudioId);
-        const materiaGenerica = await Materia.findOne({ 
-            where: {nombre: materiaGenericaNombre} 
-        });
-        if (!materiaGenerica) {
-            return res.status(404).json({ error: 'Materia no encontrada' });
-        }
-        if (!planEstudio) {
-            return res.status(404).json({ error: 'Plan de estudio no encontrado' });
-        }
-    
         const nuevaMateriaPlan = await MateriaPlan.create({
-            id_materia: materiaGenerica.id,
-            id_plan_estudio: planEstudio.id,
+            id_materia: idMateria,
+            id_plan_estudio: planEstudioId,
             horas_catedra: horasCatedra,
             duracion: duracion,
             anio_carrera: anioCarrera
@@ -35,13 +24,18 @@ exports.registrarMateriaPlan = async (req, res, next) => {
 }
 
 exports.listarMateriasPlan = async (req, res, next) => {
-    const { planEstudioId } = req.params;
-
     try {
         const materiasPlan = await MateriaPlan.findAll({ 
-            where: { id_plan_estudio: planEstudioId },
-            // Incluir el nombre de la materia asociada
-            include: [{ model: Materia, as: 'materia' }]
+            include: [
+                { 
+                    model: Materia, 
+                    as: 'materia' 
+                },
+                {
+                    model: PlanEstudio,
+                    as: 'planEstudio'
+                }
+            ]
         });
         res.status(200).json(materiasPlan);
     } catch (err) {

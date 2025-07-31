@@ -12,6 +12,11 @@ const gestionMateriaPlanCicloLectivoRoutes = require("../modules/admin/gestionMa
 const gestionPlanEstudiosRoutes = require("../modules/admin/gestionPlanEstudio/planEstudioRoutes");
 const gestionCorrelativasRoutes = require("../modules/admin/gestionMateria/gestionCorrelativa/correlativaRoutes");
 const gestionProfesorRoutes = require("../modules/admin/gestionProfesor/profesorRoutes");
+const gestionClaseRoutes = require("../modules/admin/gestionClase/claseRoutes");
+const gestionEvaluacionRoutes = require("../modules/admin/gestionEvaluacion/evaluacionRoutes");
+const gestionTemaRoutes = require("../modules/admin/gestionTema/temaRoutes");
+const gestionHorarioRoutes = require("../modules/admin/gestionHorario/horarioRoutes");
+const gestionAsistenciaRoutes = require("../modules/admin/gestionAsistencia/asistenciaRoutes");
 const errorHandler = require("../middlewares/errorHandler");
 const gestionCarreraRoutes = require("../modules/admin/gestionCarrera/carreraRoutes");
 
@@ -39,8 +44,13 @@ app.use(
   gestionMateriaPlanCicloLectivoRoutes
 );
 app.use("/api/admin/plan-estudio", gestionPlanEstudiosRoutes);
-app.use("/api/admin/materia-correlativa", gestionCorrelativasRoutes);
+app.use("/api/admin/correlativa", gestionCorrelativasRoutes);
 app.use("/api/admin/profesor", gestionProfesorRoutes);
+app.use("/api/admin/clase", gestionClaseRoutes);
+app.use("/api/admin/evaluacion", gestionEvaluacionRoutes);
+app.use("/api/admin/tema", gestionTemaRoutes);
+app.use("/api/admin/horario", gestionHorarioRoutes);
+app.use("/api/admin/asistencia", gestionAsistenciaRoutes);
 
 app.use(errorHandler);
 

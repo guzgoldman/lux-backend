@@ -36,6 +36,7 @@ exports.listarPreinscripcion = async (req, res, next) => {
       attributes: { exclude: ['createdAt','updatedAt'] },
       include: [{
         model: Preinscripcion,
+        as: 'preinscripciones',
         attributes: [
           'id','id_carrera','comentario',
           'estado','visible','fecha_creacion'

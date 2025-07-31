@@ -5,7 +5,7 @@ const {
 
 exports.registrarPlanEstudio = async (req, res, next) => {
   const { carreraId } = req.params;
-  const { nombre, descripcion } = req.body;
+  const { resolucion, anio_implementacion } = req.body;
 
   try {
     const carrera = await Carrera.findByPk(carreraId);
@@ -14,9 +14,9 @@ exports.registrarPlanEstudio = async (req, res, next) => {
     }
 
     const nuevoPlanEstudio = await PlanEstudio.create({
-      nombre,
-      descripcion,
-      id_carrera: carrera.id
+      id_carrera: carrera.id,
+      resolucion,
+      anio_implementacion
     });
 
     res.status(201).json(nuevoPlanEstudio);

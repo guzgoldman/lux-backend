@@ -1,412 +1,602 @@
-// src/models/index.js
-const sequelize = require('../config/db');
-const { DataTypes } = require('sequelize');
+const sequelize = require("../config/db");
+const { DataTypes } = require("sequelize");
+const personaModel = require("./persona");
+const direccionModel = require("./direccion");
+const historialDireccionModel = require("./historial_direccion");
+const usuarioModel = require("./usuario");
+const rolModel = require("./rol");
+const rolUsuarioModel = require("./rol_usuario");
+const alumnoTipoModel = require("./alumno_tipo");
+const preinscripcionModel = require("./preinscripcion");
+const preinscripcionEstadoModel = require("./preinscripcion_estado");
+const carreraModel = require("./carrera");
+const planEstudioModel = require("./plan_estudio");
+const materiaModel = require("./materia");
+const materiaPlanModel = require("./materia_plan");
+const materiaPlanCicloLectivoModel = require("./materia_plan_ciclo_lectivo");
+const correlativaModel = require("./correlativa");
+const examenFinalModel = require("./examen_final");
+const historialExamenFinalModel = require("./historial_examen_final");
+const profesorMateriaModel = require("./profesor_materia");
+const alumnoCarreraModel = require("./alumno_carrera");
+const inscripcionMateriaModel = require("./inscripcion_materia");
+const historialInscripcionMateriaModel = require("./historial_inscripcion_materia");
+const inscripcionExamenFinalModel = require("./inscripcion_examen_final");
+const historialInscripcionExamenFinalModel = require("./historial_inscripcion_examen_final");
+const claseModel = require("./clase");
+const claseProfesorModel = require("./clase_profesor");
+const temaModel = require("./tema");
+const claseTemaModel = require("./clase_tema");
+const evaluacionTipoModel = require("./evaluacion_tipo");
+const evaluacionModel = require("./evaluacion");
+const asistenciaModel = require("./asistencia");
+const historialAsistenciaModel = require("./historial_asistencia");
+const certificadoModel = require("./certificado");
+const alertaModel = require("./alerta");
+const asistenciaExamenFinalModel = require("./asistencia_examen_final");
+const historialAsistenciaExamenFinalModel = require("./historial_asistencia_examen_final");
+const horarioMateriaModel = require("./horario_materia");
 
-/* ---------- Imports de todos los modelos ---------- */
-const personaModel                         = require('./persona');
-const direccionModel                       = require('./direccion');
-const historialDireccionModel              = require('./historial_direccion');
-const usuarioModel                         = require('./usuario');
-const rolModel                             = require('./rol');
-const rolUsuarioModel                      = require('./rol_usuario');
-const alumnoTipoModel                      = require('./alumno_tipo');
-const preinscripcionModel                  = require('./preinscripcion');
+const Persona = personaModel(sequelize, DataTypes);
+const Direccion = direccionModel(sequelize, DataTypes);
+const HistorialDireccion = historialDireccionModel(sequelize, DataTypes);
+const Usuario = usuarioModel(sequelize, DataTypes);
+const Rol = rolModel(sequelize, DataTypes);
+const RolUsuario = rolUsuarioModel(sequelize, DataTypes);
+const AlumnoTipo = alumnoTipoModel(sequelize, DataTypes);
+const Preinscripcion = preinscripcionModel(sequelize, DataTypes);
+const PreinscripcionEstado = preinscripcionEstadoModel(sequelize, DataTypes);
+const Carrera = carreraModel(sequelize, DataTypes);
+const PlanEstudio = planEstudioModel(sequelize, DataTypes);
+const Materia = materiaModel(sequelize, DataTypes);
+const MateriaPlan = materiaPlanModel(sequelize, DataTypes);
+const MateriaPlanCicloLectivo = materiaPlanCicloLectivoModel(
+  sequelize,
+  DataTypes
+);
+const Correlativa = correlativaModel(sequelize, DataTypes);
+const ExamenFinal = examenFinalModel(sequelize, DataTypes);
+const HistorialExamenFinal = historialExamenFinalModel(sequelize, DataTypes);
+const ProfesorMateria = profesorMateriaModel(sequelize, DataTypes);
+const AlumnoCarrera = alumnoCarreraModel(sequelize, DataTypes);
+const InscripcionMateria = inscripcionMateriaModel(sequelize, DataTypes);
+const HistorialInscripcionMateria = historialInscripcionMateriaModel(
+  sequelize,
+  DataTypes
+);
+const InscripcionExamenFinal = inscripcionExamenFinalModel(
+  sequelize,
+  DataTypes
+);
+const HistorialInscripcionExamenFinal = historialInscripcionExamenFinalModel(
+  sequelize,
+  DataTypes
+);
+const Clase = claseModel(sequelize, DataTypes);
+const ClaseProfesor = claseProfesorModel(sequelize, DataTypes);
+const Tema = temaModel(sequelize, DataTypes);
+const ClaseTema = claseTemaModel(sequelize, DataTypes);
+const EvaluacionTipo = evaluacionTipoModel(sequelize, DataTypes);
+const Evaluacion = evaluacionModel(sequelize, DataTypes);
+const Asistencia = asistenciaModel(sequelize, DataTypes);
+const HistorialAsistencia = historialAsistenciaModel(sequelize, DataTypes);
+const Certificado = certificadoModel(sequelize, DataTypes);
+const Alerta = alertaModel(sequelize, DataTypes);
+const AsistenciaExamenFinal = asistenciaExamenFinalModel(sequelize, DataTypes);
+const HistorialAsistenciaExamenFinal = historialAsistenciaExamenFinalModel(
+  sequelize,
+  DataTypes
+);
+const HorarioMateria = horarioMateriaModel(sequelize, DataTypes);
 
-const carreraModel                         = require('./carrera');
-const planEstudioModel                     = require('./plan_estudio');
-const materiaModel                         = require('./materia');
-const materiaPlanModel                     = require('./materia_plan');
-const materiaPlanCicloLectivoModel         = require('./materia_plan_ciclo_lectivo');
-const correlativaModel                     = require('./correlativa');
+Persona.hasMany(Direccion, { foreignKey: "id_persona", as: "direcciones" });
 
-const examenFinalModel                     = require('./examen_final');
-const historialExamenFinalModel            = require('./historial_examen_final');
-const profesorMateriaModel                 = require('./profesor_materia');
+HistorialDireccion.belongsTo(Direccion, {
+  as: "direccion",
+  foreignKey: "id_direccion",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
-const alumnoCarreraModel                   = require('./alumno_carrera');
-const inscripcionMateriaModel              = require('./inscripcion_materia');
-const historialInscripcionMateriaModel     = require('./historial_inscripcion_materia');
-const inscripcionExamenFinalModel          = require('./inscripcion_examen_final');
-const historialInscripcionExamenFinalModel = require('./historial_inscripcion_examen_final');
+HistorialDireccion.belongsTo(Usuario, {
+  as: "usuario",
+  foreignKey: "realizado_por",
+});
 
-const claseModel                           = require('./clase');
-const claseProfesorModel                   = require('./clase_profesor');
-const temaModel                            = require('./tema');
-const claseTemaModel                       = require('./clase_tema');
+Carrera.hasMany(PlanEstudio, { foreignKey: "id_carrera", as: "planesEstudio" });
 
-const evaluacionTipoModel                  = require('./evaluacion_tipo');
-const evaluacionModel                      = require('./evaluacion');
+MateriaPlan.belongsTo(Materia, {
+  foreignKey: "id_materia",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+  as: "materia",
+});
 
-const asistenciaModel                      = require('./asistencia');
-const historialAsistenciaModel             = require('./historial_asistencia');
+Materia.hasMany(MateriaPlan, { foreignKey: "id_materia", as: "materiaPlans" });
 
-const certificadoModel                     = require('./certificado');
-const alertaModel                          = require('./alerta');
+MateriaPlan.belongsTo(PlanEstudio, {
+  foreignKey: "id_plan_estudio",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+  as: "planEstudio",
+});
 
-const asistenciaExamenFinalModel           = require('./asistencia_examen_final');
-const historialAsistenciaExamenFinalModel  = require('./historial_asistencia_examen_final');
+PlanEstudio.hasMany(MateriaPlan, {
+  foreignKey: "id_plan_estudio",
+  as: "materiaPlans",
+});
 
-const horarioMateriaModel                  = require('./horario_materia');
+MateriaPlanCicloLectivo.belongsTo(MateriaPlan, {
+  as: "materiaPlan",
+  foreignKey: "id_materia_plan",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
-/* ---------- Instanciación ---------- */
-const Persona                         = personaModel(sequelize, DataTypes);
-const Direccion                       = direccionModel(sequelize, DataTypes);
-const HistorialDireccion              = historialDireccionModel(sequelize, DataTypes);
-const Usuario                         = usuarioModel(sequelize, DataTypes);
-const Rol                             = rolModel(sequelize, DataTypes);
-const RolUsuario                      = rolUsuarioModel(sequelize, DataTypes);
-const AlumnoTipo                      = alumnoTipoModel(sequelize, DataTypes);
-const Preinscripcion                  = preinscripcionModel(sequelize, DataTypes);
+MateriaPlan.hasMany(MateriaPlanCicloLectivo, {
+  as: "ciclos",
+  foreignKey: "id_materia_plan",
+});
 
-const Carrera                         = carreraModel(sequelize, DataTypes);
-const PlanEstudio                     = planEstudioModel(sequelize, DataTypes);
-const Materia                         = materiaModel(sequelize, DataTypes);
-const MateriaPlan                     = materiaPlanModel(sequelize, DataTypes);
-const MateriaPlanCicloLectivo         = materiaPlanCicloLectivoModel(sequelize, DataTypes);
-const Correlativa                     = correlativaModel(sequelize, DataTypes);
-
-const ExamenFinal                     = examenFinalModel(sequelize, DataTypes);
-const HistorialExamenFinal            = historialExamenFinalModel(sequelize, DataTypes);
-const ProfesorMateria                 = profesorMateriaModel(sequelize, DataTypes);
-
-const AlumnoCarrera                   = alumnoCarreraModel(sequelize, DataTypes);
-const InscripcionMateria              = inscripcionMateriaModel(sequelize, DataTypes);
-const HistorialInscripcionMateria     = historialInscripcionMateriaModel(sequelize, DataTypes);
-const InscripcionExamenFinal          = inscripcionExamenFinalModel(sequelize, DataTypes);
-const HistorialInscripcionExamenFinal = historialInscripcionExamenFinalModel(sequelize, DataTypes);
-
-const Clase                           = claseModel(sequelize, DataTypes);
-const ClaseProfesor                   = claseProfesorModel(sequelize, DataTypes);
-const Tema                            = temaModel(sequelize, DataTypes);
-const ClaseTema                       = claseTemaModel(sequelize, DataTypes);
-
-const EvaluacionTipo                  = evaluacionTipoModel(sequelize, DataTypes);
-const Evaluacion                      = evaluacionModel(sequelize, DataTypes);
-
-const Asistencia                      = asistenciaModel(sequelize, DataTypes);
-const HistorialAsistencia             = historialAsistenciaModel(sequelize, DataTypes);
-
-const Certificado                     = certificadoModel(sequelize, DataTypes);
-const Alerta                          = alertaModel(sequelize, DataTypes);
-
-const AsistenciaExamenFinal           = asistenciaExamenFinalModel(sequelize, DataTypes);
-const HistorialAsistenciaExamenFinal  = historialAsistenciaExamenFinalModel(sequelize, DataTypes);
-
-const HorarioMateria                  = horarioMateriaModel(sequelize, DataTypes);
-
-
-
-Persona.hasMany(Direccion,      { foreignKey: 'id_persona', as: 'direcciones' });
-
-HistorialDireccion.belongsTo(Direccion, { foreignKey: 'id_direccion',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-HistorialDireccion.belongsTo(Usuario,   { foreignKey: 'realizado_por' });
-
-/* ==== Carrera / PlanEstudio ==== */
-Carrera.hasMany(PlanEstudio,   { foreignKey: 'id_carrera', as:"planesEstudio" });
-
-/* ==== Materia / MateriaPlan / MateriaPlanCicloLectivo ==== */
-MateriaPlan.belongsTo(Materia,      { foreignKey: 'id_materia',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE', as:"materia" });
-Materia.hasMany(MateriaPlan, { foreignKey: 'id_materia', as:"materiaPlans" });
-
-MateriaPlan.belongsTo(PlanEstudio,  { foreignKey: 'id_plan_estudio',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE', as: "planEstudio" });
-PlanEstudio.hasMany(MateriaPlan,    { foreignKey: 'id_plan_estudio', as:"materiaPlans" });
-
-MateriaPlanCicloLectivo.belongsTo(MateriaPlan, { foreignKey: 'id_materia_plan',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-MateriaPlan.hasMany(MateriaPlanCicloLectivo,   { foreignKey: 'id_materia_plan' });
-
-/* ==== Correlativas (N-a-N autodirigido) ==== */
 MateriaPlan.belongsToMany(MateriaPlan, {
   through: Correlativa,
-  as: 'Correlativas',              // qué materias necesita
-  foreignKey: 'id_materia_plan',
-  otherKey:  'id_materia_plan_correlativa',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE'
+  as: "Correlativas",
+  foreignKey: "id_materia_plan",
+  otherKey: "id_materia_plan_correlativa",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
 });
 
-/* ==== ExamenFinal & su historial ==== */
-ExamenFinal.belongsTo(MateriaPlanCicloLectivo, { foreignKey: 'id_materia_plan_ciclo_lectivo',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-MateriaPlanCicloLectivo.hasMany(ExamenFinal,   { foreignKey: 'id_materia_plan_ciclo_lectivo' });
+Correlativa.belongsTo(MateriaPlan, {
+  as: "materiaPrincipal",
+  foreignKey: "id_materia_plan",
+});
 
-ExamenFinal.belongsTo(Usuario, { as: 'Profesor', foreignKey: 'id_usuario_profesor',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
+Correlativa.belongsTo(MateriaPlan, {
+  as: "materiaCorrelativa",
+  foreignKey: "id_materia_plan_correlativa",
+});
 
-HistorialExamenFinal.belongsTo(ExamenFinal, { foreignKey: 'id_examen',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-HistorialExamenFinal.belongsTo(Usuario,     { foreignKey: 'realizado_por' });
+ExamenFinal.belongsTo(MateriaPlanCicloLectivo, {
+  as: "ciclo",
+  foreignKey: "id_materia_plan_ciclo_lectivo",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
-/* ==== ProfesorMateria ==== */
-ProfesorMateria.belongsTo(Usuario,               { foreignKey: 'id_usuario_profesor',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-ProfesorMateria.belongsTo(MateriaPlanCicloLectivo, { foreignKey: 'id_materia_plan_ciclo_lectivo',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
+MateriaPlanCicloLectivo.hasMany(ExamenFinal, {
+  as: "examenes",
+  foreignKey: "id_materia_plan_ciclo_lectivo",
+});
 
-AlumnoCarrera.belongsTo(AlumnoTipo, { foreignKey: 'id_tipo_alumno',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
+ExamenFinal.belongsTo(Usuario, {
+  as: "Profesor",
+  foreignKey: "id_usuario_profesor",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
-Usuario.hasMany(AlumnoCarrera,    { foreignKey: 'id_persona',   as: 'carreras' });
+HistorialExamenFinal.belongsTo(ExamenFinal, {
+  as: "examenFinal",
+  foreignKey: "id_examen",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
-HistorialInscripcionMateria.belongsTo(Usuario,               { foreignKey: 'realizado_por' });
+HistorialExamenFinal.belongsTo(Usuario, {
+  as: "usuario",
+  foreignKey: "realizado_por",
+});
+
+ProfesorMateria.belongsTo(Usuario, {
+  as: "profesor",
+  foreignKey: "id_usuario_profesor",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+ProfesorMateria.belongsTo(MateriaPlanCicloLectivo, {
+  as: "ciclo",
+  foreignKey: "id_materia_plan_ciclo_lectivo",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+MateriaPlanCicloLectivo.hasMany(ProfesorMateria, {
+  as: "profesores",
+  foreignKey: "id_materia_plan_ciclo_lectivo"
+});
+
+AlumnoCarrera.belongsTo(AlumnoTipo, {
+  as: "tipo",
+  foreignKey: "id_tipo_alumno",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+Usuario.hasMany(AlumnoCarrera, { foreignKey: "id_persona", as: "carreras" });
+
+HistorialInscripcionMateria.belongsTo(Usuario, {
+  as: "usuario",
+  foreignKey: "realizado_por",
+});
+
 HistorialInscripcionMateria.belongsTo(InscripcionMateria, {
-  foreignKey: ['id_usuario_alumno', 'id_materia_plan_ciclo_lectivo']
+  as: "inscripcion",
+  foreignKey: ["id_usuario_alumno", "id_materia_plan_ciclo_lectivo"],
 });
 
-/* ==== Inscripción a Examen Final & su historial ==== */
-InscripcionExamenFinal.belongsTo(Usuario,     { foreignKey: 'id_usuario_alumno',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-InscripcionExamenFinal.belongsTo(ExamenFinal,{ foreignKey: 'id_examen_final',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
+InscripcionExamenFinal.belongsTo(Usuario, {
+  as: "alumno",
+  foreignKey: "id_usuario_alumno",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
-HistorialInscripcionExamenFinal.belongsTo(Usuario, { foreignKey: 'realizado_por' });
+InscripcionExamenFinal.belongsTo(ExamenFinal, {
+  as: "examenFinal",
+  foreignKey: "id_examen_final",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+HistorialInscripcionExamenFinal.belongsTo(Usuario, {
+  as: "usuario",
+  foreignKey: "realizado_por",
+});
+
 HistorialInscripcionExamenFinal.belongsTo(InscripcionExamenFinal, {
-  foreignKey: ['id_usuario_alumno', 'id_examen_final']
+  as: "inscripcion",
+  foreignKey: ["id_usuario_alumno", "id_examen_final"],
 });
 
-/* ==== Clases ==== */
-Clase.belongsTo(MateriaPlanCicloLectivo, { foreignKey: 'id_materia_plan_ciclo_lectivo',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-MateriaPlanCicloLectivo.hasMany(Clase,  { foreignKey: 'id_materia_plan_ciclo_lectivo' });
+Clase.belongsTo(MateriaPlanCicloLectivo, {
+  as: "ciclo",
+  foreignKey: "id_materia_plan_ciclo_lectivo",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
-/* ---- ClaseProfesor (N-a-N usuario profesor ↔ clase) ---- */
-ClaseProfesor.belongsTo(Clase,   { foreignKey: 'id_clase',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-ClaseProfesor.belongsTo(Usuario, { as: 'Profesor', foreignKey: 'id_usuario_profesor',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
+MateriaPlanCicloLectivo.hasMany(Clase, {
+  as: "clases",
+  foreignKey: "id_materia_plan_ciclo_lectivo",
+});
 
-/* ---- ClaseTema ---- */
-ClaseTema.belongsTo(Clase, { foreignKey: 'id_clase',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-ClaseTema.belongsTo(Tema,  { foreignKey: 'id_tema',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
+ClaseProfesor.belongsTo(Clase, {
+  as: "clase",
+  foreignKey: "id_clase",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
-Evaluacion.belongsTo(EvaluacionTipo,     { foreignKey: 'id_evaluacion_tipo' });
+ClaseProfesor.belongsTo(Usuario, {
+  as: "Profesor",
+  foreignKey: "id_usuario_profesor",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
-/* ==== Asistencias a clase & su historial ==== */
-Asistencia.belongsTo(Clase,   { foreignKey: 'id_clase',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-Asistencia.belongsTo(Usuario, { as: 'Alumno',   foreignKey: 'id_usuario_alumno',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-Asistencia.belongsTo(Usuario, { as: 'Profesor', foreignKey: 'id_usuario_profesor_registro',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
+ClaseTema.belongsTo(Clase, {
+  as: "clase",
+  foreignKey: "id_clase",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
-HistorialAsistencia.belongsTo(Asistencia, { foreignKey: 'id_asistencia',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-HistorialAsistencia.belongsTo(Usuario,    { foreignKey: 'realizado_por' });
+ClaseTema.belongsTo(Tema, {
+  as: "tema",
+  foreignKey: "id_tema",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
-/* ==== Certificados ==== */
-Certificado.belongsTo(Usuario, { foreignKey: 'id_usuario_alumno',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
+Evaluacion.belongsTo(EvaluacionTipo, {
+  as: "tipo",
+  foreignKey: "id_evaluacion_tipo",
+});
 
-/* ==== Alertas ==== */
-Alerta.belongsTo(Usuario, { as: 'Administrador', foreignKey: 'id_usuario_administrador',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
+Asistencia.belongsTo(Clase, {
+  as: "clase",
+  foreignKey: "id_clase",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
-/* ==== Asistencia a examen final & su historial ==== */
-AsistenciaExamenFinal.belongsTo(ExamenFinal, { foreignKey: 'id_examen_final',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-AsistenciaExamenFinal.belongsTo(Usuario, { as: 'Alumno', foreignKey: 'id_usuario_alumno',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-AsistenciaExamenFinal.belongsTo(Usuario, { as: 'ProfesorControl', foreignKey: 'id_usuario_profesor_control',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
+Asistencia.belongsTo(Usuario, {
+  as: "Alumno",
+  foreignKey: "id_usuario_alumno",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
-HistorialAsistenciaExamenFinal.belongsTo(AsistenciaExamenFinal, { foreignKey: 'id_asistencia_examen_final',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-HistorialAsistenciaExamenFinal.belongsTo(Usuario, { foreignKey: 'realizado_por' });
+Asistencia.belongsTo(Usuario, {
+  as: "Profesor",
+  foreignKey: "id_usuario_profesor_registro",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
-Preinscripcion.belongsTo(Persona, { foreignKey: 'id_persona',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
-Preinscripcion.belongsTo(Carrera, { foreignKey: 'id_carrera',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE' });
+HistorialAsistencia.belongsTo(Asistencia, {
+  as: "asistencia",
+  foreignKey: "id_asistencia",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+HistorialAsistencia.belongsTo(Usuario, {
+  as: "usuario",
+  foreignKey: "realizado_por",
+});
+
+Certificado.belongsTo(Usuario, {
+  as: "alumno",
+  foreignKey: "id_usuario_alumno",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+Alerta.belongsTo(Usuario, {
+  as: "Administrador",
+  foreignKey: "id_usuario_administrador",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+AsistenciaExamenFinal.belongsTo(ExamenFinal, {
+  as: "examenFinal",
+  foreignKey: "id_examen_final",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+AsistenciaExamenFinal.belongsTo(Usuario, {
+  as: "Alumno",
+  foreignKey: "id_usuario_alumno",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+AsistenciaExamenFinal.belongsTo(Usuario, {
+  as: "ProfesorControl",
+  foreignKey: "id_usuario_profesor_control",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+HistorialAsistenciaExamenFinal.belongsTo(AsistenciaExamenFinal, {
+  as: "asistenciaExamenFinal",
+  foreignKey: "id_asistencia_examen_final",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+HistorialAsistenciaExamenFinal.belongsTo(Usuario, {
+  as: "usuario",
+  foreignKey: "realizado_por",
+});
+
+Preinscripcion.belongsTo(Persona, {
+  as: "persona",
+  foreignKey: "id_persona",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+Preinscripcion.belongsTo(Carrera, {
+  as: "carrera",
+  foreignKey: "id_carrera",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
 Persona.hasMany(Preinscripcion, {
-  foreignKey: 'id_persona',
-  onDelete: 'CASCADE',
-  onUpdate: 'CASCADE'
+  as: "preinscripciones",
+  foreignKey: "id_persona",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
 });
 
 Materia.belongsToMany(PlanEstudio, {
   through: MateriaPlan,
-  foreignKey: 'id_materia',
-  otherKey: 'id_plan_estudio',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE'
+  foreignKey: "id_materia",
+  otherKey: "id_plan_estudio",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
 });
 
-// PlanEstudio ↔ Carrera (ya lo tienes como belongsTo pero puedes renombrar el alias)
 PlanEstudio.belongsTo(Carrera, {
-  foreignKey: 'id_carrera',
-  as:"carrera",
-  onDelete: 'CASCADE', onUpdate: 'CASCADE'
+  foreignKey: "id_carrera",
+  as: "carrera",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
 });
 
 PlanEstudio.belongsToMany(Materia, {
   through: MateriaPlan,
-  foreignKey: 'id_plan_estudio',
-  otherKey: 'id_materia',
-  onDelete: 'CASCADE', onUpdate: 'CASCADE'
+  foreignKey: "id_plan_estudio",
+  otherKey: "id_materia",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
 });
 
-/* ==== Usuario ↔ Persona (1:1) ==== */
-Usuario.belongsTo(Persona, { 
-  foreignKey: 'id_persona', 
-  as: 'persona',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
-});
-Persona.hasOne(Usuario, { 
-  foreignKey: 'id_persona', 
-  as: 'usuario',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
+Usuario.belongsTo(Persona, {
+  foreignKey: "id_persona",
+  as: "persona",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
 });
 
-Direccion.belongsTo(Persona, { 
-  foreignKey: 'id_persona', 
-  as: 'persona',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
+Persona.hasOne(Usuario, {
+  foreignKey: "id_persona",
+  as: "usuario",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
 });
 
-/* ==== Persona → AlumnoCarrera (1:N) ==== */
-Persona.hasMany(AlumnoCarrera, { 
-  foreignKey: 'id_persona', 
-  as: 'carreras',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
-});
-AlumnoCarrera.belongsTo(Persona, { 
-  foreignKey: 'id_persona', 
-  as: 'persona',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
+Direccion.belongsTo(Persona, {
+  foreignKey: "id_persona",
+  as: "persona",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
 });
 
-/* ==== AlumnoCarrera → Carrera (N:1) ==== */
-AlumnoCarrera.belongsTo(Carrera, { 
-  foreignKey: 'id_carrera', 
-  as: 'carrera',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
-});
-Carrera.hasMany(AlumnoCarrera, { 
-  foreignKey: 'id_carrera', 
-  as: 'inscripcionesCarrera',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
+Persona.hasMany(AlumnoCarrera, {
+  foreignKey: "id_persona",
+  as: "carreras",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
 });
 
-/* ==== Usuario → InscripcionMateria (1:N) ==== */
-Usuario.hasMany(InscripcionMateria, { 
-  foreignKey: 'id_usuario_alumno', 
-  as: 'inscripciones',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
-});
-InscripcionMateria.belongsTo(Usuario, { 
-  foreignKey: 'id_usuario_alumno', 
-  as: 'usuario',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
+AlumnoCarrera.belongsTo(Persona, {
+  foreignKey: "id_persona",
+  as: "persona",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
 });
 
-/* ==== InscripcionMateria → MateriaPlanCicloLectivo (N:1) ==== */
-MateriaPlanCicloLectivo.hasMany(InscripcionMateria, { 
-  foreignKey: 'id_materia_plan_ciclo_lectivo', 
-  as: 'inscripcionesCiclo',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
-});
-InscripcionMateria.belongsTo(MateriaPlanCicloLectivo, { 
-  foreignKey: 'id_materia_plan_ciclo_lectivo', 
-  as: 'ciclo',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
+AlumnoCarrera.belongsTo(Carrera, {
+  foreignKey: "id_carrera",
+  as: "carrera",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
 });
 
-/* ==== MateriaPlanCicloLectivo → Materia (N:1) ==== */
-Materia.hasMany(MateriaPlanCicloLectivo, { 
-  foreignKey: 'id_materia_plan', 
-  as: 'planesCiclo',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
-});
-MateriaPlanCicloLectivo.belongsTo(Materia, { 
-  foreignKey: 'id_materia_plan', 
-  as: 'materia',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
+Carrera.hasMany(AlumnoCarrera, {
+  foreignKey: "id_carrera",
+  as: "inscripcionesCarrera",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
 });
 
-/* ==== MateriaPlanCicloLectivo → HorarioMateria (1:N) ==== */
-MateriaPlanCicloLectivo.hasMany(HorarioMateria, { 
-  foreignKey: 'id_materia_plan_ciclo_lectivo', 
-  as: 'horarios',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
-});
-HorarioMateria.belongsTo(MateriaPlanCicloLectivo, { 
-  foreignKey: 'id_materia_plan_ciclo_lectivo', 
-  as: 'ciclo',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
+Usuario.hasMany(InscripcionMateria, {
+  foreignKey: "id_usuario_alumno",
+  as: "inscripciones",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
 });
 
-/* ==== InscripcionMateria → Evaluacion (1:N) ==== */
-InscripcionMateria.hasMany(Evaluacion, { 
-  foreignKey: 'id_inscripcion_materia', 
-  as: 'evaluaciones',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
-});
-Evaluacion.belongsTo(InscripcionMateria, { 
-  foreignKey: 'id_inscripcion_materia', 
-  as: 'inscripcion',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
+InscripcionMateria.belongsTo(Usuario, {
+  foreignKey: "id_usuario_alumno",
+  as: "usuario",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
 });
 
-/* ==== Usuario ↔ Rol (N:M vía RolUsuario) ==== */
-Usuario.belongsToMany(Rol, { 
-  through: RolUsuario, 
-  foreignKey: 'id_usuario', 
-  otherKey: 'id_rol',
-  as: 'roles',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
-});
-Rol.belongsToMany(Usuario, { 
-  through: RolUsuario, 
-  foreignKey: 'id_rol', 
-  otherKey: 'id_usuario',
-  as: 'usuarios',
-  onDelete: 'CASCADE', 
-  onUpdate: 'CASCADE'
+MateriaPlanCicloLectivo.hasMany(InscripcionMateria, {
+  foreignKey: "id_materia_plan_ciclo_lectivo",
+  as: "inscripcionesCiclo",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
 });
 
-/* Asociaciones intermedias para RolUsuario */
-RolUsuario.belongsTo(Usuario, { foreignKey: 'id_usuario' });
-RolUsuario.belongsTo(Rol,     { foreignKey: 'id_rol' });
-Usuario.hasMany(RolUsuario,   { foreignKey: 'id_usuario' });
-Rol.hasMany(RolUsuario,       { foreignKey: 'id_rol' });
+InscripcionMateria.belongsTo(MateriaPlanCicloLectivo, {
+  foreignKey: "id_materia_plan_ciclo_lectivo",
+  as: "ciclo",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
 
-/* -------------------------------------------------------------------------- */
-/*                            Exportación conjunta                            */
-/* -------------------------------------------------------------------------- */
+Materia.hasMany(MateriaPlanCicloLectivo, {
+  foreignKey: "id_materia_plan",
+  as: "planesCiclo",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+MateriaPlanCicloLectivo.belongsTo(Materia, {
+  foreignKey: "id_materia_plan",
+  as: "materia",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+MateriaPlanCicloLectivo.hasMany(HorarioMateria, {
+  foreignKey: "id_materia_plan_ciclo_lectivo",
+  as: "horarios",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+HorarioMateria.belongsTo(MateriaPlanCicloLectivo, {
+  foreignKey: "id_materia_plan_ciclo_lectivo",
+  as: "ciclo",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+InscripcionMateria.hasMany(Evaluacion, {
+  foreignKey: "id_inscripcion_materia",
+  as: "evaluaciones",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+Evaluacion.belongsTo(InscripcionMateria, {
+  foreignKey: "id_inscripcion_materia",
+  as: "inscripcion",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+Usuario.belongsToMany(Rol, {
+  through: RolUsuario,
+  foreignKey: "id_usuario",
+  otherKey: "id_rol",
+  as: "roles",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+Rol.belongsToMany(Usuario, {
+  through: RolUsuario,
+  foreignKey: "id_rol",
+  otherKey: "id_usuario",
+  as: "usuarios",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+RolUsuario.belongsTo(Usuario, { foreignKey: "id_usuario" });
+RolUsuario.belongsTo(Rol, { foreignKey: "id_rol" });
+Usuario.hasMany(RolUsuario, { foreignKey: "id_usuario" });
+Rol.hasMany(RolUsuario, { foreignKey: "id_rol" });
+
 module.exports = {
-  sequelize,                 // por si necesitás acceder desde otros módulos
-  Persona, Direccion, HistorialDireccion,
-  Usuario, Rol, RolUsuario, AlumnoTipo,
-  Carrera, PlanEstudio, Materia, MateriaPlan, MateriaPlanCicloLectivo, Correlativa,
-  ExamenFinal, HistorialExamenFinal, ProfesorMateria,
-  AlumnoCarrera, InscripcionMateria, HistorialInscripcionMateria,
-  InscripcionExamenFinal, HistorialInscripcionExamenFinal,
-  Clase, ClaseProfesor, Tema, ClaseTema,
-  EvaluacionTipo, Evaluacion,
-  Asistencia, HistorialAsistencia,
-  Certificado, Alerta,
-  AsistenciaExamenFinal, HistorialAsistenciaExamenFinal,
-  HorarioMateria, Preinscripcion
+  sequelize,
+  Persona,
+  Direccion,
+  HistorialDireccion,
+  Usuario,
+  Rol,
+  RolUsuario,
+  AlumnoTipo,
+  Carrera,
+  PlanEstudio,
+  Materia,
+  MateriaPlan,
+  MateriaPlanCicloLectivo,
+  Correlativa,
+  ExamenFinal,
+  HistorialExamenFinal,
+  ProfesorMateria,
+  AlumnoCarrera,
+  InscripcionMateria,
+  HistorialInscripcionMateria,
+  InscripcionExamenFinal,
+  HistorialInscripcionExamenFinal,
+  Clase,
+  ClaseProfesor,
+  Tema,
+  ClaseTema,
+  EvaluacionTipo,
+  Evaluacion,
+  Asistencia,
+  HistorialAsistencia,
+  Certificado,
+  Alerta,
+  AsistenciaExamenFinal,
+  HistorialAsistenciaExamenFinal,
+  HorarioMateria,
+  Preinscripcion,
+  PreinscripcionEstado,
 };

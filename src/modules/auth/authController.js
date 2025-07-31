@@ -18,7 +18,7 @@ exports.login = async (req, res, next) => {
       return res.status(401).json({ message: 'Credenciales inválidas' });
     }
 
-    const roles = await usuario.getRols({
+    const roles = await usuario.getRoles({
       attributes: ['nombre'],
       joinTableAttributes: []
     });

@@ -20,7 +20,7 @@ router.post(
 );
 
 router.get(
-    '/:planEstudioId/listar-materias',
+    '/listar-materias',
     verifyToken,
     requireRole('Administrador'),
     listarMateriasPlan

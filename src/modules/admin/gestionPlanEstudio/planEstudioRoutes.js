@@ -13,13 +13,13 @@ const {
 } = require('../../../middlewares/auth');
 
 router.post(
-    '/:carreraId/registrar-plan-estudio',
+    '/:carreraId/registrar-plan',
     verifyToken,
     requireRole('Administrador'),
     registrarPlanEstudio);
 
 router.get(
-    '/listar-planes-estudio',
+    '/listar-planes',
     verifyToken,
     requireRole('Administrador'),
     listarPlanesEstudio);
