@@ -32,8 +32,6 @@ exports.createPreinscripcion = async (req, res, next) => {
         {
           calle: req.body.calle,
           altura: req.body.altura,
-          piso: req.body.piso,
-          departamento: req.body.departamento,
           localidad: req.body.localidad,
           id_persona: persona.id,
         },
@@ -50,25 +48,27 @@ exports.createPreinscripcion = async (req, res, next) => {
       { transaction: t }
     );
 
-    // Obtener nombre de la carrera
     const carrera = await Carrera.findByPk(req.body.carrera);
 
     await t.commit();
 
-    // --- FORMATO FECHA Y HORA ---
-    // Sequelize devuelve fecha_creacion como Date al hacer .get({plain:true}) o al acceder a preinscripcion.fecha_creacion
-    let fechaHora = preinscripcion.fecha_creacion
-      ? new Date(preinscripcion.fecha_creacion)
-      : new Date();
-    const registrationNumber = `PR-${fechaHora.getFullYear()}-${String(
+    let fechaHora =
+      preinscripcion.createdAt ||
+      preinscripcion.fecha_creacion ||
+      Date.now();
+
+    fechaHora = new Date(fechaHora);
+    if (isNaN(fechaHora.getTime())) fechaHora = new Date();
+
+    const registrationNumber = `PR-${String(
       preinscripcion.id
     ).padStart(5, "0")}`;
 
-    // Ejemplo: 25/07/2024 y 17:05
     const submissionDate = fechaHora.toLocaleDateString("es-AR");
     const submissionTime = fechaHora.toLocaleTimeString("es-AR", {
       hour: "2-digit",
       minute: "2-digit",
+      hour12: false,
     });
 
     res.status(201).json({

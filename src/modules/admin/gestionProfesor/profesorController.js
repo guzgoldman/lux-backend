@@ -13,12 +13,15 @@ exports.listarProfesores = async (req, res, next) => {
       include: [
         {
           model: Rol,
+          as: "roles",
           where: { nombre: "Profesor" },
           attributes: [],
           through: { attributes: [] },
         },
-        { model: Persona,
-          attributes: ['nombre', 'apellido', 'dni']
+        {
+          model: Persona,
+          as: "persona",
+          attributes: ["nombre", "apellido", "dni"],
         },
       ],
       attributes: ["id", "username"],
