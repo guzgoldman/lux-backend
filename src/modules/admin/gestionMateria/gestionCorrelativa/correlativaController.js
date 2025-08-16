@@ -36,17 +36,19 @@ exports.listarCorrelativas = async (req, res, next) => {
         {
           model: MateriaPlan,
           as: "materiaPrincipal",
+          attributes: ["id"],
           include: [
-            { model: Materia, as: "materia" },
-            { model: PlanEstudio, as: "planEstudio" },
+            { model: Materia, as: "materia", attributes: ["id", "nombre"] },
+            { model: PlanEstudio, as: "planEstudio", attributes: ["resolucion"] },
           ],
         },
         {
           model: MateriaPlan,
           as: "materiaCorrelativa",
+          attributes: ["id"],
           include: [
-            { model: Materia, as: "materia" },
-            { model: PlanEstudio, as: "planEstudio" },
+            { model: Materia, as: "materia", attributes: ["id", "nombre"] },
+            { model: PlanEstudio, as: "planEstudio", attributes: ["resolucion"] },
           ],
         },
       ],

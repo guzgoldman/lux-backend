@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require("bcrypt");
 const {
   Persona,
   Usuario,
@@ -6,45 +6,48 @@ const {
   RolUsuario,
   AlumnoCarrera,
   Preinscripcion,
-  sequelize
-} = require('../../../models');
+  sequelize,
+} = require("../../../models");
 
-const { Op } = require('sequelize');
+const { Op } = require("sequelize");
 
 exports.listarPreinscripcion = async (req, res, next) => {
   try {
     const { estado, visible, search } = req.query;
-
-    // Filtros dinámicos para Preinscripcion
     const preWhere = {};
-    if (estado)                preWhere.estado  = estado;
-    if (visible === '0' || visible === '1') preWhere.visible = Number(visible);
+    if (estado) preWhere.estado = estado;
+    if (visible === "0" || visible === "1") preWhere.visible = Number(visible);
 
-    // Filtro dinámico para Persona (nombre, apellido, dni)
     const personaWhere = {};
     if (search) {
       const term = `%${search}%`;
       personaWhere[Op.or] = [
-        { nombre:   { [Op.like]: term } },
+        { nombre: { [Op.like]: term } },
         { apellido: { [Op.like]: term } },
-        { dni:      { [Op.like]: term } },
+        { dni: { [Op.like]: term } },
       ];
     }
 
     const personas = await Persona.findAll({
       where: personaWhere,
-      attributes: { exclude: ['createdAt','updatedAt'] },
-      include: [{
-        model: Preinscripcion,
-        as: 'preinscripciones',
-        attributes: [
-          'id','id_carrera','comentario',
-          'estado','visible','fecha_creacion'
-        ],
-        where: preWhere,
-        required: true
-      }],
-      order: [['fecha_registro','ASC']]
+      attributes: { exclude: ["createdAt", "updatedAt"] },
+      include: [
+        {
+          model: Preinscripcion,
+          as: "preinscripciones",
+          attributes: [
+            "id",
+            "id_carrera",
+            "comentario",
+            "estado",
+            "visible",
+            "fecha_creacion",
+          ],
+          where: preWhere,
+          required: true,
+        },
+      ],
+      order: [["fecha_registro", "ASC"]],
     });
 
     res.json(personas);
@@ -60,40 +63,56 @@ exports.aceptar = async (req, res, next) => {
   try {
     await sequelize.transaction(async (t) => {
       const persona = await Persona.findByPk(personaId, { transaction: t });
-      if (!persona) throw new Error('Persona no encontrada');
+      if (!persona) throw new Error("Persona no encontrada");
 
       const preinscripcion = await Preinscripcion.findOne({
-        where: { id_persona: persona.id, estado: 'Pendiente', visible: 1 },
-        transaction: t
+        where: { id_persona: persona.id, estado: "Pendiente", visible: 1 },
+        transaction: t,
       });
-      if (!preinscripcion) throw new Error('No se encontró una preinscripción pendiente para esta persona.');
+      if (!preinscripcion)
+        throw new Error(
+          "No se encontró una preinscripción pendiente para esta persona."
+        );
 
-      preinscripcion.estado = 'Aprobada';
+      preinscripcion.estado = "Aprobada";
       preinscripcion.visible = 0;
       await preinscripcion.save({ transaction: t });
 
-      let usuario = await Usuario.findOne({ where: { id_persona: persona.id }, transaction: t });
+      let usuario = await Usuario.findOne({
+        where: { id_persona: persona.id },
+        transaction: t,
+      });
 
       if (!usuario) {
         const dni = persona.dni;
-        const existe = await Usuario.findOne({ where: { username: dni }, transaction: t });
-        if (existe) throw new Error('Ya existe un usuario con ese DNI como username');
+        const existe = await Usuario.findOne({
+          where: { username: dni },
+          transaction: t,
+        });
+        if (existe)
+          throw new Error("Ya existe un usuario con ese DNI como username");
 
-        usuario = await Usuario.create({
-          username: dni,
-          password: await bcrypt.hash(dni, 10),
-          id_persona: persona.id
-        }, { transaction: t });
+        usuario = await Usuario.create(
+          {
+            username: dni,
+            password: await bcrypt.hash(dni, 10),
+            id_persona: persona.id,
+          },
+          { transaction: t }
+        );
       }
 
-      let rolAlumno = await Rol.findOne({ where: { nombre: 'Alumno' }, transaction: t });
+      let rolAlumno = await Rol.findOne({
+        where: { nombre: "Alumno" },
+        transaction: t,
+      });
       if (!rolAlumno) {
-        rolAlumno = await Rol.create({ nombre: 'Alumno' }, { transaction: t });
+        rolAlumno = await Rol.create({ nombre: "Alumno" }, { transaction: t });
       }
 
       const yaEsAlumno = await RolUsuario.findOne({
         where: { id_usuario: usuario.id, id_rol: rolAlumno.id },
-        transaction: t
+        transaction: t,
       });
       if (!yaEsAlumno) {
         await RolUsuario.create(
@@ -104,20 +123,22 @@ exports.aceptar = async (req, res, next) => {
 
       const yaInscripto = await AlumnoCarrera.findOne({
         where: { id_persona: persona.id, id_carrera: carreraId },
-        transaction: t
+        transaction: t,
       });
       if (!yaInscripto) {
         await AlumnoCarrera.create(
           {
             id_persona: persona.id,
             id_carrera: carreraId,
-            id_tipo_alumno: tipoAlumnoId
+            id_tipo_alumno: tipoAlumnoId,
           },
           { transaction: t }
         );
       }
 
-      res.status(201).json({ usuarioId: usuario.id, username: usuario.username });
+      res
+        .status(201)
+        .json({ usuarioId: usuario.id, username: usuario.username });
     });
   } catch (err) {
     next(err);
@@ -130,10 +151,10 @@ exports.ocultar = async (req, res, next) => {
   try {
     await sequelize.transaction(async (t) => {
       const persona = await Persona.findByPk(personaId, { transaction: t });
-      if (!persona) throw new Error('Persona no encontrada');
+      if (!persona) throw new Error("Persona no encontrada");
 
       await Preinscripcion.update(
-        { estado: 'Oculta', visible: 0 },
+        { estado: "Oculta", visible: 0 },
         { where: { id_persona: persona.id }, transaction: t }
       );
 

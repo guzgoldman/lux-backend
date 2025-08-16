@@ -32,10 +32,10 @@ router.put(
 );
 
 router.get(
-    '/:id/detalle',
-    verifyToken,
-    requireRole('Administrador'),
-    detalleMateriaPlanCicloLectivo
+  "/:id/detalle",
+  verifyToken,
+  requireRole("Administrador"),
+  detalleMateriaPlanCicloLectivo
 );
 
 module.exports = router;

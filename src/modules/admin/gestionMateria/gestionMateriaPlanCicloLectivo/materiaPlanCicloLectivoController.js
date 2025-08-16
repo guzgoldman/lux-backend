@@ -123,53 +123,75 @@ exports.detalleMateriaPlanCicloLectivo = async (req, res, next) => {
       include: [
         {
           model: MateriaPlan,
+          as: "materiaPlan",
           include: [
-            { model: Materia, as: 'materia' },
-            { model: PlanEstudio, as: 'planEstudio', include: [{ model: Carrera, as: 'carrera' }] }
-          ]
+            { model: Materia, as: "materia" },
+            {
+              model: PlanEstudio,
+              as: "planEstudio",
+              include: [{ model: Carrera, as: "carrera" }],
+            },
+          ],
         },
         {
           model: InscripcionMateria,
-          as: 'inscripcionesCiclo',
+          as: "inscripcionesCiclo",
           include: [
-            { model: Usuario, as: 'usuario', include: [{ model: Persona, as: 'persona' }] },
-            { model: Evaluacion, as: 'evaluaciones', include: [{ model: EvaluacionTipo }] }
-          ]
-        }
-      ]
+            {
+              model: Usuario,
+              as: "usuario",
+              include: [{ model: Persona, as: "persona" }],
+            },
+            {
+              model: Evaluacion,
+              as: "evaluaciones",
+              include: [{ model: EvaluacionTipo, as: "tipo" }],
+            },
+          ],
+        },
+      ],
     });
 
     if (!ciclo) {
-      return res.status(404).json({ error: 'Materia del plan ciclo lectivo no encontrada' });
+      return res
+        .status(404)
+        .json({ error: "Materia del plan ciclo lectivo no encontrada" });
     }
 
     const profesores = await ProfesorMateria.findAll({
       where: { id_materia_plan_ciclo_lectivo: id },
-      include: [{ model: Usuario, as: 'usuario', include: [{ model: Persona, as: 'persona' }] }]
+      include: [
+        {
+          model: Usuario,
+          as: "profesor",
+          include: [{ model: Persona, as: "persona" }],
+        },
+      ],
     });
 
     const detalle = {
-      id: ciclo.id,
-      materia: ciclo.MateriaPlan?.materia?.nombre,
-      resolucion_plan: ciclo.MateriaPlan?.planEstudio?.resolucion,
-      carrera: ciclo.MateriaPlan?.planEstudio?.carrera?.nombre,
-      alumnos: (ciclo.inscripcionesCiclo || []).map(ins => ({
+      id_mpcl: ciclo.id,
+      ciclo: ciclo.ciclo_lectivo,
+      materia: ciclo.materiaPlan?.materia?.nombre,
+      resolucion: ciclo.materiaPlan?.planEstudio?.resolucion,
+      carrera: ciclo.materiaPlan?.planEstudio?.carrera?.nombre,
+      alumnos: (ciclo.inscripcionesCiclo || []).map((ins) => ({
         nombre: ins.usuario?.persona?.nombre,
         apellido: ins.usuario?.persona?.apellido,
         email: ins.usuario?.persona?.email,
         fecha_inscripcion: ins.fecha_inscripcion,
-        evaluaciones: (ins.evaluaciones || []).map(ev => ({
-          tipo: ev.EvaluacionTipo?.descripcion,
-          codigo_tipo: ev.EvaluacionTipo?.codigo,
-          nota: ev.nota
-        }))
+        evaluaciones: (ins.evaluaciones || []).map((ev) => ({
+          tipo: ev.tipo?.descripcion,
+          codigo_tipo: ev.tipo?.codigo,
+          nota: ev.nota,
+        })),
       })),
-      profesores: profesores.map(p => ({
-        nombre: p.usuario?.persona?.nombre,
-        apellido: p.usuario?.persona?.apellido,
-        email: p.usuario?.persona?.email,
-        rol: p.rol
-      }))
+      profesores: profesores.map((p) => ({
+        nombre: p.profesor?.persona?.nombre,
+        apellido: p.profesor?.persona?.apellido,
+        email: p.profesor?.persona?.email,
+        rol: p.rol,
+      })),
     };
 
     res.json(detalle);

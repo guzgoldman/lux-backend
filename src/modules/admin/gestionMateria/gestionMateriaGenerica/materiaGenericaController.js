@@ -1,23 +1,27 @@
-const { Materia, MateriaPlan, PlanEstudio, Carrera } = require('../../../../models');
-const { Op, fn, col, where } = require('sequelize');
+const {
+  Materia,
+  MateriaPlan,
+  PlanEstudio,
+  Carrera,
+} = require("../../../../models");
+const { Op, fn, col, where } = require("sequelize");
 
 exports.registrarMateria = async (req, res, next) => {
   const { nombre } = req.body;
 
-  if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
+  if (!nombre || typeof nombre !== "string" || !nombre.trim()) {
     return res.status(400).json({ error: 'El campo "nombre" es obligatorio.' });
   }
 
   try {
     const existente = await Materia.findOne({
-      where: where(
-        fn('lower', col('nombre')),
-        nombre.trim().toLowerCase()
-      )
+      where: where(fn("lower", col("nombre")), nombre.trim().toLowerCase()),
     });
 
     if (existente) {
-      return res.status(409).json({ error: 'Ya existe una materia con ese nombre.' });
+      return res
+        .status(409)
+        .json({ error: "Ya existe una materia con ese nombre." });
     }
 
     const nuevaMateria = await Materia.create({ nombre: nombre.trim() });
@@ -30,44 +34,55 @@ exports.registrarMateria = async (req, res, next) => {
 exports.listarMaterias = async (req, res, next) => {
   try {
     const materias = await Materia.findAll({
-      order: [['nombre', 'ASC']],
+      attributes: ["id", "nombre"],
+      order: [["nombre", "ASC"]],
       include: [
         {
           model: MateriaPlan,
           as: "materiaPlans",
+          attributes: ["id"],
           include: [
             {
               model: PlanEstudio,
               as: "planEstudio",
+              attributes: ["id", "resolucion"],
               include: [
                 {
                   model: Carrera,
-                  as: "carrera"
-                }
-              ]
-            }
-          ]
-        }
-      ]
+                  as: "carrera",
+                  attributes: ["id", "nombre"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
     });
 
-    const resultado = materias.map(m => ({
+    const resultado = materias.map((m) => ({
       id: m.id,
       nombre: m.nombre,
-      activa: m.activa,
-      plan_estudio: (m.MateriaPlans || []).map(mp => mp.PlanEstudio ? {
-        id: mp.PlanEstudio.id,
-        nombre: mp.PlanEstudio.nombre
-      } : null).filter(x => x !== null),
-      carrera: Array.from(new Set(
-        (m.MateriaPlans || [])
-          .map(mp => mp.PlanEstudio?.Carrera)
-          .filter(c => c)
-          .map(c => `${c.id}::${c.nombre}`)
-      )).map(str => {
-        const [id, nombre] = str.split('::');
+      plan_estudio: (m.materiaPlans || [])
+        .map((mp) =>
+          mp.planEstudio
+            ? {
+                id: mp.planEstudio.id,
+                resolucion: mp.planEstudio.resolucion,
+              }
+            : null
+        )
+        .filter((x) => x !== null),
+      carrera: Array.from(
+        new Set(
+          (m.materiaPlans || [])
+            .map((mp) => mp.planEstudio?.carrera)
+            .filter((c) => c)
+            .map((c) => `${c.id}::${c.nombre}`)
+        )
+      ).map((str) => {
+        const [id, nombre] = str.split("::");
         return { id: +id, nombre };
-      })
+      }),
     }));
 
     return res.status(200).json(resultado);
@@ -83,7 +98,7 @@ exports.editarMateria = async (req, res, next) => {
   try {
     const materia = await Materia.findByPk(id);
     if (!materia) {
-      return res.status(404).json({ error: 'Materia no encontrada' });
+      return res.status(404).json({ error: "Materia no encontrada" });
     }
 
     materia.nombre = nombre || materia.nombre;
@@ -93,4 +108,4 @@ exports.editarMateria = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-}
+};
