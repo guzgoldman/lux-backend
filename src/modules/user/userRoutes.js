@@ -4,7 +4,6 @@ const { perfil, mostrarDatosPersonales, actualizarDatosPersonales, actualizarPas
 const { verifyToken, requireRole } = require("../../middlewares/auth");
 
 router.get("/perfil", verifyToken, perfil);
-
 router.get("/perfil/:id", verifyToken, requireRole("Administrador"), perfil);
 
 router.get("/:id/datos-personales", verifyToken, mostrarDatosPersonales);

@@ -1,4 +1,3 @@
-// controllers/usuarios.controller.js
 const {
   Usuario,
   Persona,
