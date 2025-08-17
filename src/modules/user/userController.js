@@ -12,6 +12,7 @@ const {
   Carrera,
   Rol,
 } = require("../../models");
+const bcrypt = require("bcrypt");
 
 exports.perfil = async (req, res, next) => {
   try {
@@ -158,3 +159,69 @@ exports.perfil = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.mostrarDatosPersonales = async (req, res, next) => {
+  try {
+    const idUsuario = req.params.id || req.user.id;
+    const usuario = await Usuario.findByPk(idUsuario, {
+      attributes: ["id"],
+      include: [
+        {
+          model: Persona,
+          as: "persona",
+          attributes: [
+            "email",
+            "telefono",
+          ],
+        },
+      ],
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    res.json({
+      email: usuario.persona.email,
+      telefono: usuario.persona.telefono,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+}
+
+exports.actualizarDatosPersonales = async (req, res, next) => {
+  const idUsuario = req.params.id || req.user.id;
+  const { email, telefono } = req.body;
+  try {
+    const usuario = await Usuario.findByPk(idUsuario, {
+    });
+    if (!usuario) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+    await usuario.update({email, telefono});
+    res.json({ message: "Datos actualizados correctamente" });
+  } catch (error) {
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+  }
+
+exports.actualizarPassword= async (req, res, next) => {
+  try {
+    const { passwordActual, nuevoPassword } = req.body;
+    const idUsuario = req.params.id || req.user.id;
+    const usuario = await Usuario.findByPk(idUsuario);
+    if (!usuario) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+    const passwordMatch = await bcrypt.compare(passwordActual, usuario.password);
+    if (!passwordMatch) {
+      return res.status(400).json({ message: "Password actual incorrecto" });
+    }
+    const hashedPassword = await bcrypt.hash(nuevoPassword, 10);
+    await usuario.update({ password: hashedPassword });
+    res.json({ message: "Password actualizado correctamente" });
+  } catch (error) {
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+}
