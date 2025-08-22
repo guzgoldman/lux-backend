@@ -134,12 +134,11 @@ exports.perfil = async (req, res, next) => {
         { iconoKey: "promedio", valor: promedio.toFixed(1) },
         { iconoKey: "materias", valor: `${totalMaterias}` },
         { iconoKey: "aprobadas", valor: `${aprobadas}/${totalMaterias}` },
-        // Asistencia requeriría otro modelo (no incluido aquí)
       ],
       horarios: usuario.inscripciones.flatMap((i) =>
         i.ciclo.horarios.map((h) => ({
           nombre: i.ciclo.materia.nombre,
-          profesor: "—", // Podrías extraerlo de profesor_materia si lo cargas
+          profesor: "—",
           horario: `Día ${h.dia_semana} Bloque ${h.bloque}`,
         }))
       ),
@@ -168,10 +167,7 @@ exports.mostrarDatosPersonales = async (req, res, next) => {
         {
           model: Persona,
           as: "persona",
-          attributes: [
-            "email",
-            "telefono",
-          ],
+          attributes: ["email", "telefono"],
         },
       ],
     });
@@ -187,25 +183,31 @@ exports.mostrarDatosPersonales = async (req, res, next) => {
   } catch (error) {
     res.status(500).json({ message: "Error interno del servidor" });
   }
-}
+};
 
 exports.actualizarDatosPersonales = async (req, res, next) => {
   const idUsuario = req.params.id || req.user.id;
   const { email, telefono } = req.body;
   try {
     const usuario = await Usuario.findByPk(idUsuario, {
+      include: [{ model: Persona, as: "persona" }],
     });
     if (!usuario) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
-    await usuario.update({email, telefono});
-    res.json({ message: "Datos actualizados correctamente" });
+    await usuario.persona.update({
+      email,
+      telefono,
+    });
+    res.json({
+      message: "Datos actualizados correctamente",
+    });
   } catch (error) {
     res.status(500).json({ message: "Error interno del servidor" });
   }
-  }
+};
 
-exports.actualizarPassword= async (req, res, next) => {
+exports.actualizarPassword = async (req, res, next) => {
   try {
     const { passwordActual, nuevoPassword } = req.body;
     const idUsuario = req.params.id || req.user.id;
@@ -213,7 +215,10 @@ exports.actualizarPassword= async (req, res, next) => {
     if (!usuario) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
-    const passwordMatch = await bcrypt.compare(passwordActual, usuario.password);
+    const passwordMatch = await bcrypt.compare(
+      passwordActual,
+      usuario.password
+    );
     if (!passwordMatch) {
       return res.status(400).json({ message: "Password actual incorrecto" });
     }
@@ -223,4 +228,4 @@ exports.actualizarPassword= async (req, res, next) => {
   } catch (error) {
     res.status(500).json({ message: "Error interno del servidor" });
   }
-}
+};
