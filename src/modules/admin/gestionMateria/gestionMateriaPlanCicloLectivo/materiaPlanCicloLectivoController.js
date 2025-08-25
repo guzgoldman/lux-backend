@@ -10,6 +10,11 @@ const {
   EvaluacionTipo,
   ProfesorMateria,
   Carrera,
+  Clase,
+  HorarioMateria,
+  Tema,
+  ClaseTema,
+  ClaseProfesor
 } = require("../../../../models");
 
 exports.registrarMateriaPlanCicloLectivo = async (req, res, next) => {
@@ -197,6 +202,144 @@ exports.detalleMateriaPlanCicloLectivo = async (req, res, next) => {
 
     res.json(detalle);
   } catch (err) {
+    next(err);
+  }
+};
+
+exports.asignarProfesor = async (req, res, next) => {
+  const { materiaId } = req.params;
+  const { profesorId, profesorRol } = req.body;
+
+  try {
+    const materia = await MateriaPlanCicloLectivo.findByPk(materiaId);
+    if (!materia) {
+      return res
+        .status(404)
+        .json({ error: "Materia del plan ciclo lectivo no encontrada" });
+    }
+
+    const profesor = await Usuario.findByPk(profesorId);
+    if (!profesor) {
+      return res.status(404).json({ error: "Profesor no encontrado" });
+    }
+
+    await ProfesorMateria.create({
+      id_materia_plan_ciclo_lectivo: materiaId,
+      id_usuario_profesor: profesorId,
+      rol: profesorRol,
+    });
+
+    res.status(201).json({ message: "Profesor asignado a la materia" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.crearClase = async (req, res, next) => {
+  const { idMateriaPlanCicloLectivo, fecha } = req.body;
+
+  try {
+    const materia = await MateriaPlanCicloLectivo.findByPk(idMateriaPlanCicloLectivo);
+    if (!materia) {
+      return res.status(404).json({ error: "Materia del plan ciclo lectivo no encontrada" });
+    }
+
+    const clase = await Clase.create({
+      id_materia_plan_ciclo_lectivo: idMateriaPlanCicloLectivo,
+      fecha
+    });
+
+    res.status(201).json(clase);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.listarClasesPorMateria = async (req, res, next) => {
+  const { materiaId } = req.params;
+
+  try {
+    const clases = await Clase.findAll({
+      where: { id_materia_plan_ciclo_lectivo: materiaId },
+    });
+
+    res.json(clases);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.asignarHorarioMateria = async (req, res, next) => {
+  const { idMateriaPlanCicloLectivo, diaSemana, bloque } = req.body;
+
+  try {
+    const materia = await MateriaPlanCicloLectivo.findByPk(idMateriaPlanCicloLectivo);
+    if (!materia) {
+      return res.status(404).json({ error: "Materia del plan ciclo lectivo no encontrada" });
+    }
+
+    const horarioExistente = await HorarioMateria.findOne({
+      where: {
+        id_materia_plan_ciclo_lectivo: idMateriaPlanCicloLectivo,
+        dia_semana: diaSemana,
+        bloque: bloque
+      }
+    });
+
+    if (horarioExistente) {
+      return res.status(400).json({ error: "Ya existe un horario asignado para este día y bloque" });
+    }
+
+    const horario = await HorarioMateria.create({
+      id_materia_plan_ciclo_lectivo: idMateriaPlanCicloLectivo,
+      dia_semana: diaSemana,
+      bloque: bloque
+    });
+
+    res.status(201).json(horario);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.registrarClaseInformacion = async (req, res, next) => {
+  const { idClase, tema, idProfesor } = req.body;
+
+  const t = await sequelize.transaction();
+  try {
+    const clase = await Clase.findByPk(idClase, { transaction: t });
+    if (!clase) {
+      await t.rollback();
+      return res.status(404).json({ error: "Clase no encontrada" });
+    }
+
+    const nuevoTema = await Tema.create(
+      { descripcion: tema },
+      { transaction: t }
+    );
+
+    await ClaseTema.create(
+      {
+        id_clase: idClase,
+        id_tema: nuevoTema.id,
+      },
+      { transaction: t }
+    );
+
+    if (idProfesor) {
+      await ClaseProfesor.create(
+        {
+          id_clase: idClase,
+          id_usuario_profesor: idProfesor,
+        },
+        { transaction: t }
+      );
+    }
+
+    await t.commit();
+    res.status(201).json('Tema y profesor vinculados correctamente');
+  } catch (err) {
+    await t.rollback();
     next(err);
   }
 };

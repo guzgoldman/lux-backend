@@ -9,26 +9,6 @@ const {
   MateriaPlanCicloLectivo
 } = require('../../../models');
 
-exports.registrarClase = async (req, res, next) => {
-  const { cicloLectivoId, fecha } = req.body;
-
-  try {
-    const ciclo = await MateriaPlanCicloLectivo.findByPk(cicloLectivoId);
-    if (!ciclo) {
-      return res.status(404).json({ error: 'Materia plan ciclo lectivo no encontrado' });
-    }
-
-    const clase = await Clase.create({
-      id_materia_plan_ciclo_lectivo: ciclo.id,
-      fecha
-    });
-
-    res.status(201).json(clase);
-  } catch (err) {
-    next(err);
-  }
-};
-
 exports.detalleClase = async (req, res, next) => {
   const { claseId } = req.params;
 
@@ -58,7 +38,7 @@ exports.detalleClase = async (req, res, next) => {
 
     const temas = await ClaseTema.findAll({
       where: { id_clase: clase.id },
-      include: [{ model: Tema }]
+      include: [{ model: Tema, as: 'tema' }]
     });
 
     const alumnos = asistencias.map(a => ({

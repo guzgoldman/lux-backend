@@ -6,6 +6,11 @@ const {
   listarMateriasPlanCicloLectivo,
   modificarMateriaPlanCicloLectivo,
   detalleMateriaPlanCicloLectivo,
+  asignarProfesor,
+  crearClase,
+  listarClasesPorMateria,
+  asignarHorarioMateria,
+  registrarClaseInformacion,
 } = require("./materiaPlanCicloLectivoController");
 
 const { verifyToken, requireRole } = require("../../../../middlewares/auth");
@@ -34,8 +39,43 @@ router.put(
 router.get(
   "/:id/detalle",
   verifyToken,
-  requireRole("Administrador"),
+  requireRole("Administrador", "Profesor"),
   detalleMateriaPlanCicloLectivo
+);
+
+router.post(
+  "/:materiaId/asignar-profesor",
+  verifyToken,
+  requireRole("Administrador"),
+  asignarProfesor
+);
+
+router.post(
+  "/crear-clase",
+  verifyToken,
+  requireRole("Administrador", "Profesor"),
+  crearClase
+);
+
+router.get(
+  "/:materiaId/listar-clases",
+  verifyToken,
+  requireRole("Administrador", "Profesor"),
+  listarClasesPorMateria
+);
+
+router.post(
+  "/asignar-horario",
+  verifyToken,
+  requireRole("Administrador"),
+  asignarHorarioMateria
+);
+
+router.post(
+  "/registrar-informacion-clase",
+  verifyToken,
+  requireRole("Administrador", "Profesor"),
+  registrarClaseInformacion
 );
 
 module.exports = router;

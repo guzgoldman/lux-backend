@@ -4,10 +4,8 @@ module.exports = (sequelize, DataTypes) => {
     {
       id:                           { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
       id_materia_plan_ciclo_lectivo:{ type: DataTypes.INTEGER },
-      aula:                         { type: DataTypes.STRING(20) },
-      modalidad:                    { type: DataTypes.STRING(20) },
       dia_semana:                   { type: DataTypes.INTEGER }, // 1=Lunes … 5=Viernes
-      bloque:                       { type: DataTypes.STRING(10) } // PRIMERO, SEGUNDO
+      bloque:                       { type: DataTypes.INTEGER } // 1=18:20-20:20, 2=20:30-22:30
     },
     {
       tableName: 'horario_materia',

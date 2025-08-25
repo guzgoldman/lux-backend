@@ -3,6 +3,6 @@ const router = express.Router();
 const { registrarAsistencia } = require('./asistenciaController');
 const { verifyToken, requireRole } = require('../../../middlewares/auth');
 
-router.post('/registrar-asistencia', verifyToken, requireRole('Administrador'), registrarAsistencia);
+router.post('/registrar-asistencia', verifyToken, requireRole('Administrador', 'Profesor'), registrarAsistencia);
 
 module.exports = router;
