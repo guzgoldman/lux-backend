@@ -6,7 +6,7 @@ module.exports = (sequelize, DataTypes) => {
                 id_persona:    { type: DataTypes.INTEGER, allowNull: false },
                 id_carrera:    { type: DataTypes.INTEGER, allowNull: false },
                 fecha_creacion:{ type: DataTypes.DATE, defaultValue: sequelize.literal('CURRENT_TIMESTAMP') },
-                estado:        { type: DataTypes.ENUM('Pendiente','Aprobada','Rechazada'), defaultValue: 'Pendiente' },
+                estado:        { type: DataTypes.ENUM('Pendiente', 'Aprobada'), defaultValue: 'Pendiente' },
                 visible:       { type: DataTypes.TINYINT, defaultValue: 1 },
                 comentario:    { type: DataTypes.TEXT }
             }, 

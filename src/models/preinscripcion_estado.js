@@ -3,7 +3,7 @@ module.exports = (sequelize, DataTypes) => {
     'preinscripcion_estado',
     {
       id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-      vigente: { type: DataTypes.TINYINT }
+      abierta: { type: DataTypes.TINYINT }
     },
     {
       tableName: 'preinscripcion_estado',

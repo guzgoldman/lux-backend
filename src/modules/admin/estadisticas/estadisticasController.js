@@ -20,25 +20,26 @@ const calcularEdad = (fechaNacimiento) => {
 
 exports.getEstadisticas = async (req, res, next) => {
   try {
-    // genero
     const generoPorCarrera = await AlumnoCarrera.findAll({
       attributes: [
         "id_carrera",
         [
           literal('SUM(CASE WHEN `persona`.`sexo` = "M" THEN 1 ELSE 0 END)'),
-          "varones",
+          "hombres",
         ],
         [
           literal('SUM(CASE WHEN `persona`.`sexo` = "F" THEN 1 ELSE 0 END)'),
           "mujeres",
         ],
+        [
+          literal('SUM(CASE WHEN `persona`.`sexo` = "X" THEN 1 ELSE 0 END)'),
+          "noBin",
+        ],
       ],
       include: [
         { model: Persona, as: "persona", attributes: ["sexo"] },
-
         { model: Carrera, as: "carrera", attributes: ["nombre"] },
       ],
-
       group: ["id_carrera", col("carrera.nombre")],
       raw: true,
       subQuery: false,
@@ -73,27 +74,27 @@ exports.getEstadisticas = async (req, res, next) => {
       estudiantes: rangos[key],
     }));
 
-    // cantidad por año
-    const tipoEgresado = await AlumnoTipo.findOne({
-      where: { nombre: "Egresado" },
-    });
-    if (!tipoEgresado) {
-      return res
-        .status(404)
-        .json({ message: 'Tipo de alumno "Egresado" no encontrado.' });
-    }
+    // // cantidad por año
+    // const tipoEgresado = await AlumnoTipo.findOne({
+    //   where: { nombre: "Egresado" },
+    // });
+    // if (!tipoEgresado) {
+    //   return res
+    //     .status(404)
+    //     .json({ message: 'Tipo de alumno "Egresado" no encontrado.' });
+    // }
 
-    const egresadosPorAnio = await AlumnoCarrera.findAll({
-      where: { id_tipo_alumno: tipoEgresado.id },
-      attributes: [
-        [fn("YEAR", col("fecha_inscripcion")), "anio"],
-        [fn("COUNT", col("id")), "cantidad"],
-      ],
-      group: [fn("YEAR", col("fecha_inscripcion"))],
-      raw: true,
-    });
+    // const egresadosPorAnio = await AlumnoCarrera.findAll({
+    //   where: { id_tipo_alumno: tipoEgresado.id },
+    //   attributes: [
+    //     [fn("YEAR", col("fecha_inscripcion")), "anio"],
+    //     [fn("COUNT", col("id")), "cantidad"],
+    //   ],
+    //   group: [fn("YEAR", col("fecha_inscripcion"))],
+    //   raw: true,
+    // });
 
-    const estadisticas = { generoPorCarrera, rangoEtario, egresadosPorAnio };
+    const estadisticas = { generoPorCarrera, rangoEtario };
     res.status(200).json(estadisticas);
   } catch (err) {
     next(err);
