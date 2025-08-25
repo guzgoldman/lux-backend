@@ -11,6 +11,7 @@ const gestionMateriaPlanRoutes = require("../modules/admin/gestionMateria/gestio
 const gestionMateriaPlanCicloLectivoRoutes = require("../modules/admin/gestionMateria/gestionMateriaPlanCicloLectivo/materiaPlanCicloLectivoRoutes");
 const gestionPlanEstudiosRoutes = require("../modules/admin/gestionPlanEstudio/planEstudioRoutes");
 const gestionCorrelativasRoutes = require("../modules/admin/gestionMateria/gestionCorrelativa/correlativaRoutes");
+const estadisticasRoutes = require("../modules/admin/estadisticas/estadisticasRoutes");
 const gestionProfesorRoutes = require("../modules/admin/gestionProfesor/profesorRoutes");
 const gestionClaseRoutes = require("../modules/admin/gestionClase/claseRoutes");
 const gestionEvaluacionRoutes = require("../modules/admin/gestionEvaluacion/evaluacionRoutes");
@@ -23,7 +24,7 @@ const app = express();
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "http://192.168.0.213:5173",
+    origin: "http://192.168.56.1:5173",
     credentials: true,
   })
 );
@@ -44,6 +45,7 @@ app.use(
 app.use("/api/admin/plan-estudio", gestionPlanEstudiosRoutes);
 app.use("/api/admin/correlativa", gestionCorrelativasRoutes);
 app.use("/api/admin/profesor", gestionProfesorRoutes);
+app.use("/api/admin/estadisticas", estadisticasRoutes);
 app.use("/api/admin/clase", gestionClaseRoutes);
 app.use("/api/admin/evaluacion", gestionEvaluacionRoutes);
 app.use("/api/admin/asistencia", gestionAsistenciaRoutes);
