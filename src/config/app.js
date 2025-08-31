@@ -18,6 +18,7 @@ const gestionEvaluacionRoutes = require("../modules/admin/gestionEvaluacion/eval
 const gestionAsistenciaRoutes = require("../modules/admin/gestionAsistencia/asistenciaRoutes");
 const errorHandler = require("../middlewares/errorHandler");
 const gestionCarreraRoutes = require("../modules/admin/gestionCarrera/carreraRoutes");
+const pdfRoutes = require('../pdf/pdf.routes')
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use(
 app.use(express.json());
 app.use(morgan("dev"));
 
+app.use("/api/pdf", pdfRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/usuario", userRoutes);
 app.use("/api/preinscripcion", preinscripcionRoutes);

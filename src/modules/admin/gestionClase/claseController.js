@@ -42,6 +42,7 @@ exports.detalleClase = async (req, res, next) => {
     });
 
     const alumnos = asistencias.map(a => ({
+      id_usuario: a.id_usuario_alumno,
       nombre: a.Alumno?.persona?.nombre,
       apellido: a.Alumno?.persona?.apellido,
       asistencia: a.estado_asistencia
