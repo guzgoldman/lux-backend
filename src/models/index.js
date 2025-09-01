@@ -540,6 +540,11 @@ InscripcionMateria.hasMany(Evaluacion, {
   onUpdate: "CASCADE",
 });
 
+InscripcionMateria.hasMany(CalificacionCuatrimestre, {
+  as: 'calificaciones',
+  foreignKey: 'id_inscripcion_materia'
+});
+
 Evaluacion.belongsTo(InscripcionMateria, {
   foreignKey: "id_inscripcion_materia",
   as: "inscripcion",
@@ -608,4 +613,5 @@ module.exports = {
   HorarioMateria,
   Preinscripcion,
   PreinscripcionEstado,
+  CalificacionCuatrimestre
 };

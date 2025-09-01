@@ -6,15 +6,14 @@ const {
   InscripcionMateria,
   Usuario,
   Persona,
-  Evaluacion,
-  EvaluacionTipo,
   ProfesorMateria,
   Carrera,
   Clase,
   HorarioMateria,
   Tema,
   ClaseTema,
-  ClaseProfesor
+  ClaseProfesor,
+  CalificacionCuatrimestre,
 } = require("../../../../models");
 
 exports.registrarMateriaPlanCicloLectivo = async (req, res, next) => {
@@ -130,27 +129,47 @@ exports.detalleMateriaPlanCicloLectivo = async (req, res, next) => {
           model: MateriaPlan,
           as: "materiaPlan",
           include: [
-            { model: Materia, as: "materia" },
+            { model: Materia, as: "materia", attributes: ["id", "nombre"] },
             {
               model: PlanEstudio,
               as: "planEstudio",
-              include: [{ model: Carrera, as: "carrera" }],
+              attributes: ["id", "resolucion"],
+              include: [
+                { model: Carrera, as: "carrera", attributes: ["id", "nombre"] },
+              ],
             },
           ],
         },
         {
           model: InscripcionMateria,
           as: "inscripcionesCiclo",
+          attributes: [
+            "id",
+            "id_usuario_alumno",
+            "fecha_inscripcion",
+            "estado",
+            "nota_final",
+          ],
           include: [
             {
               model: Usuario,
               as: "usuario",
-              include: [{ model: Persona, as: "persona" }],
+              attributes: ["id"],
+              include: [
+                {
+                  model: Persona,
+                  as: "persona",
+                  attributes: ["nombre", "apellido", "email"],
+                },
+              ],
             },
             {
-              model: Evaluacion,
-              as: "evaluaciones",
-              include: [{ model: EvaluacionTipo, as: "tipo" }],
+              model: CalificacionCuatrimestre,
+              as: "calificaciones",
+              attributes: ["cuatrimestre", "calificacion", "bloqueada"],
+              required: false, // puede no existir aún
+              // Podés filtrar si solo querés un cuatrimestre específico:
+              // where: { cuatrimestre: 1 },
             },
           ],
         },
@@ -169,7 +188,13 @@ exports.detalleMateriaPlanCicloLectivo = async (req, res, next) => {
         {
           model: Usuario,
           as: "profesor",
-          include: [{ model: Persona, as: "persona" }],
+          include: [
+            {
+              model: Persona,
+              as: "persona",
+              attributes: ["nombre", "apellido", "email"],
+            },
+          ],
         },
       ],
     });
@@ -186,10 +211,10 @@ exports.detalleMateriaPlanCicloLectivo = async (req, res, next) => {
         apellido: ins.usuario?.persona?.apellido,
         email: ins.usuario?.persona?.email,
         fecha_inscripcion: ins.fecha_inscripcion,
-        evaluaciones: (ins.evaluaciones || []).map((ev) => ({
-          tipo: ev.tipo?.descripcion,
-          codigo_tipo: ev.tipo?.codigo,
-          nota: ev.nota,
+        calificaciones: (ins.calificaciones || []).map((c) => ({
+          cuatrimestre: c.cuatrimestre,
+          calificacion: Number(c.calificacion),
+          bloqueada: !!c.bloqueada,
         })),
       })),
       profesores: profesores.map((p) => ({
@@ -239,14 +264,18 @@ exports.crearClase = async (req, res, next) => {
   const { idMateriaPlanCicloLectivo, fecha } = req.body;
 
   try {
-    const materia = await MateriaPlanCicloLectivo.findByPk(idMateriaPlanCicloLectivo);
+    const materia = await MateriaPlanCicloLectivo.findByPk(
+      idMateriaPlanCicloLectivo
+    );
     if (!materia) {
-      return res.status(404).json({ error: "Materia del plan ciclo lectivo no encontrada" });
+      return res
+        .status(404)
+        .json({ error: "Materia del plan ciclo lectivo no encontrada" });
     }
 
     const clase = await Clase.create({
       id_materia_plan_ciclo_lectivo: idMateriaPlanCicloLectivo,
-      fecha
+      fecha,
     });
 
     res.status(201).json(clase);
@@ -273,27 +302,33 @@ exports.asignarHorarioMateria = async (req, res, next) => {
   const { idMateriaPlanCicloLectivo, diaSemana, bloque } = req.body;
 
   try {
-    const materia = await MateriaPlanCicloLectivo.findByPk(idMateriaPlanCicloLectivo);
+    const materia = await MateriaPlanCicloLectivo.findByPk(
+      idMateriaPlanCicloLectivo
+    );
     if (!materia) {
-      return res.status(404).json({ error: "Materia del plan ciclo lectivo no encontrada" });
+      return res
+        .status(404)
+        .json({ error: "Materia del plan ciclo lectivo no encontrada" });
     }
 
     const horarioExistente = await HorarioMateria.findOne({
       where: {
         id_materia_plan_ciclo_lectivo: idMateriaPlanCicloLectivo,
         dia_semana: diaSemana,
-        bloque: bloque
-      }
+        bloque: bloque,
+      },
     });
 
     if (horarioExistente) {
-      return res.status(400).json({ error: "Ya existe un horario asignado para este día y bloque" });
+      return res.status(400).json({
+        error: "Ya existe un horario asignado para este día y bloque",
+      });
     }
 
     const horario = await HorarioMateria.create({
       id_materia_plan_ciclo_lectivo: idMateriaPlanCicloLectivo,
       dia_semana: diaSemana,
-      bloque: bloque
+      bloque: bloque,
     });
 
     res.status(201).json(horario);
@@ -337,9 +372,97 @@ exports.registrarClaseInformacion = async (req, res, next) => {
     }
 
     await t.commit();
-    res.status(201).json('Tema y profesor vinculados correctamente');
+    res.status(201).json("Tema y profesor vinculados correctamente");
   } catch (err) {
     await t.rollback();
+    next(err);
+  }
+};
+
+exports.obtenerCalificacionesCuatrimestre = async (req, res, next) => {
+  const { id, periodo } = req.params;
+
+  try {
+    const inscripciones = await InscripcionMateria.findAll({
+      where: { id_materia_plan_ciclo_lectivo: id },
+      attributes: ['id', 'estado'],
+      include: [
+        {
+          model: Usuario,
+          as: 'usuario',
+          attributes: ['id'],
+          include: [
+            {
+              model: Persona,
+              as: 'persona',
+              attributes: ['nombre', 'apellido']
+            }
+          ]
+        },
+        {
+          model: CalificacionCuatrimestre,
+          as: 'calificaciones',
+          where: { cuatrimestre: periodo },
+          required: false // Para incluir alumnos que aún no tienen calificación
+        }
+      ]
+    });
+
+    const calificaciones = inscripciones.map(inscripcion => ({
+      inscripcionId: inscripcion.id, // Ahora enviamos el ID de inscripción
+      alumno: {
+        id: inscripcion.usuario.id,
+        nombre: inscripcion.usuario.persona.nombre,
+        apellido: inscripcion.usuario.persona.apellido
+      },
+      calificacion: inscripcion.calificaciones?.[0]?.calificacion || null,
+      bloqueada: inscripcion.calificaciones?.[0]?.bloqueada || false
+    }));
+
+    res.json(calificaciones);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.actualizarCalificacionCuatrimestre = async (req, res, next) => {
+  const { id: inscripcionId } = req.params;
+  const { calificacion, cuatrimestre } = req.body;
+  const userRole = req.user.rol; // Asumiendo que el middleware de auth agrega el rol del usuario
+
+  try {
+    // Validar que la calificación esté entre 0 y 10
+    if (calificacion < 0 || calificacion > 10) {
+      return res.status(400).json({ error: "La calificación debe estar entre 0 y 10" });
+    }
+
+    // Buscar o crear la calificación
+    const [calificacionCuatrimestre, created] = await CalificacionCuatrimestre.findOrCreate({
+      where: { 
+        id_inscripcion_materia: inscripcionId,
+        cuatrimestre: cuatrimestre
+      },
+      defaults: {
+        calificacion: calificacion,
+        bloqueada: true // Al crear una nueva calificación, se bloquea automáticamente
+      }
+    });
+
+    // Si la calificación está bloqueada y el usuario no es administrador
+    if (!created && calificacionCuatrimestre.bloqueada && userRole !== 'Administrador') {
+      return res.status(403).json({ 
+        error: "La calificación está bloqueada. Solo un administrador puede modificarla."
+      });
+    }
+
+    if (!created) {
+      calificacionCuatrimestre.calificacion = calificacion;
+      calificacionCuatrimestre.bloqueada = userRole !== 'Administrador'; // Solo se mantiene desbloqueada si es admin
+      await calificacionCuatrimestre.save();
+    }
+
+    res.json(calificacionCuatrimestre);
+  } catch (err) {
     next(err);
   }
 };

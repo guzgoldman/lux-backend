@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
       dni: { type: DataTypes.STRING(10), allowNull: false },
       telefono: { type: DataTypes.STRING(15), allowNull: false },
       fecha_nacimiento: { type: DataTypes.DATEONLY, allowNull: false },
-      //nacionalidad: { type: DataTypes.STRING(10), allowNull: false },
+      nacionalidad: { type: DataTypes.STRING(10), allowNull: false },
       fecha_registro: {
         type: DataTypes.DATE,
         defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),

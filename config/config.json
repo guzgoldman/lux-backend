@@ -1,0 +1,23 @@
+{
+  "development": {
+    "username": "lujanbuenviajeed_lujanbue_adm_bas1",
+    "password": "Lujan_2025",
+    "database": "lujanbuenviajeed_lujanbue_practica_prof2025",
+    "host": "167.250.5.73",
+    "dialect": "mysql"
+  },
+  "test": {
+    "username": "root",
+    "password": null,
+    "database": "database_test",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "production": {
+    "username": "root",
+    "password": null,
+    "database": "database_production",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  }
+}

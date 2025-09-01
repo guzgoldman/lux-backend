@@ -11,6 +11,8 @@ const {
   listarClasesPorMateria,
   asignarHorarioMateria,
   registrarClaseInformacion,
+  obtenerCalificacionesCuatrimestre,
+  actualizarCalificacionCuatrimestre
 } = require("./materiaPlanCicloLectivoController");
 
 const { verifyToken, requireRole } = require("../../../../middlewares/auth");
@@ -76,6 +78,21 @@ router.post(
   verifyToken,
   requireRole("Administrador", "Profesor"),
   registrarClaseInformacion
+);
+
+// Rutas para calificaciones
+router.get(
+  "/:id/calificaciones/:periodo",
+  verifyToken,
+  requireRole("Administrador", "Profesor"),
+  obtenerCalificacionesCuatrimestre
+);
+
+router.put(
+  "/calificaciones/:id",
+  verifyToken,
+  requireRole("Administrador", "Profesor"),
+  actualizarCalificacionCuatrimestre
 );
 
 module.exports = router;

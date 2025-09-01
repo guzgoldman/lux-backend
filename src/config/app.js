@@ -14,7 +14,6 @@ const gestionCorrelativasRoutes = require("../modules/admin/gestionMateria/gesti
 const estadisticasRoutes = require("../modules/admin/estadisticas/estadisticasRoutes");
 const gestionProfesorRoutes = require("../modules/admin/gestionProfesor/profesorRoutes");
 const gestionClaseRoutes = require("../modules/admin/gestionClase/claseRoutes");
-const gestionEvaluacionRoutes = require("../modules/admin/gestionEvaluacion/evaluacionRoutes");
 const gestionAsistenciaRoutes = require("../modules/admin/gestionAsistencia/asistenciaRoutes");
 const errorHandler = require("../middlewares/errorHandler");
 const gestionCarreraRoutes = require("../modules/admin/gestionCarrera/carreraRoutes");
@@ -49,7 +48,6 @@ app.use("/api/admin/correlativa", gestionCorrelativasRoutes);
 app.use("/api/admin/profesor", gestionProfesorRoutes);
 app.use("/api/admin/estadisticas", estadisticasRoutes);
 app.use("/api/admin/clase", gestionClaseRoutes);
-app.use("/api/admin/evaluacion", gestionEvaluacionRoutes);
 app.use("/api/admin/asistencia", gestionAsistenciaRoutes);
 
 app.use(errorHandler);

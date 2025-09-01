@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
       },
       activo: { type: DataTypes.TINYINT, defaultValue: 1 },
-      //egresado: { type: DataTypes.TINYINT, defaultValue: 0 },
+      egresado: { type: DataTypes.TINYINT, defaultValue: 0 },
     },
     {
       tableName: "alumno_carrera",

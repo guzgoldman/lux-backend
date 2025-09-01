@@ -23,5 +23,8 @@
     "mysql2": "^3.14.1",
     "puppeteer": "^24.17.1",
     "sequelize": "^6.37.7"
+  },
+  "devDependencies": {
+    "sequelize-cli": "^6.6.3"
   }
 }
