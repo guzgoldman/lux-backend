@@ -10,6 +10,8 @@ const {
   AlumnoCarrera,
   Carrera,
   Rol,
+  PlanEstudio,
+  MateriaPlan,
 } = require("../../models");
 const bcrypt = require("bcrypt");
 
@@ -46,6 +48,28 @@ exports.perfil = async (req, res, next) => {
                   model: Carrera,
                   as: "carrera",
                   attributes: ["id", "nombre"],
+                  include: [
+                    {
+                      model: PlanEstudio,
+                      as: "planesEstudio",
+                      attributes: ["id", "resolucion", "vigente"],
+                      where: { vigente: 1 },
+                      include: [
+                        {
+                          model: MateriaPlan,
+                          as: "materiaPlans",
+                          attributes: ["id"],
+                          include: [
+                            {
+                              model: Materia,
+                              as: "materia",
+                              attributes: ["id", "nombre"],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
                 },
               ],
             },
@@ -62,9 +86,16 @@ exports.perfil = async (req, res, next) => {
               attributes: ["id", "ciclo_lectivo"],
               include: [
                 {
-                  model: Materia,
-                  as: "materia",
-                  attributes: ["nombre"],
+                  model: MateriaPlan,
+                  as: "materiaPlan",
+                  attributes: ["id", "id_materia"],
+                  include: [
+                    {
+                      model: Materia,
+                      as: "materia",
+                      attributes: ["id", "nombre"],
+                    },
+                  ],
                 },
                 {
                   model: HorarioMateria,
@@ -95,10 +126,22 @@ exports.perfil = async (req, res, next) => {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
 
-    const totalMaterias = usuario.inscripciones.length;
     const aprobadas = usuario.inscripciones.filter(
       (i) => i.estado === "APROBADA"
     ).length;
+    
+    // Contar materias únicas aprobadas por el alumno
+    const materiasAprobadasIds = new Set();
+    usuario.inscripciones
+      .filter((i) => i.estado === "APROBADA")
+      .forEach((i) => {
+        if (i.ciclo && i.ciclo.materiaPlan && i.ciclo.materiaPlan.id_materia) {
+          materiasAprobadasIds.add(i.ciclo.materiaPlan.id_materia);
+        }
+      });
+    
+    const materiasAprobadasUnicas = materiasAprobadasIds.size;
+    
     const promedio =
       usuario.inscripciones
         .flatMap((i) => i.evaluaciones)
@@ -116,6 +159,13 @@ exports.perfil = async (req, res, next) => {
     let carreraActiva =
       carreras.find((c) => c.activo === 1) || carreras[0] || {};
     const idTipo = carreraActiva.id_tipo_alumno;
+    
+    // Obtener total de materias del plan de estudios vigente
+    let totalMateriasPlan = 0;
+    if (carreraActiva.carrera && carreraActiva.carrera.planesEstudio && carreraActiva.carrera.planesEstudio.length > 0) {
+      const planVigente = carreraActiva.carrera.planesEstudio[0]; // Ya filtrado por vigente: 1
+      totalMateriasPlan = planVigente.materiaPlans ? planVigente.materiaPlans.length : 0;
+    }
 
     const informacionPersonal = {
       nombre: `${usuario.persona.nombre} ${usuario.persona.apellido}`,
@@ -132,18 +182,17 @@ exports.perfil = async (req, res, next) => {
       informacionPersonal,
       estadisticas: [
         { iconoKey: "promedio", valor: promedio.toFixed(1) },
-        { iconoKey: "materias", valor: `${totalMaterias}` },
-        { iconoKey: "aprobadas", valor: `${aprobadas}/${totalMaterias}` },
+        { iconoKey: "aprobadas", valor: `${materiasAprobadasUnicas}/${totalMateriasPlan}` },
       ],
       horarios: usuario.inscripciones.flatMap((i) =>
         i.ciclo.horarios.map((h) => ({
-          nombre: i.ciclo.materia.nombre,
+          nombre: i.ciclo.materiaPlan.materia.nombre,
           profesor: "—",
           horario: `Día ${h.dia_semana} Bloque ${h.bloque}`,
         }))
       ),
       materias: usuario.inscripciones.map((i) => ({
-        nombre: i.ciclo.materia.nombre,
+        nombre: i.ciclo.materiaPlan.materia.nombre,
         profesor: "—",
         estado: i.estado,
         horario: i.ciclo.horarios
