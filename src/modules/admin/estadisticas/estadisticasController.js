@@ -3,6 +3,9 @@ const {
   Persona,
   Carrera,
   AlumnoTipo,
+  MateriaPlan,
+  InscripcionMateria,
+  PlanEstudio,
 } = require("../../../models/");
 const { Op, fn, col, literal } = require("sequelize");
 
@@ -20,6 +23,7 @@ const calcularEdad = (fechaNacimiento) => {
 
 exports.getEstadisticas = async (req, res, next) => {
   try {
+    // Estadísticas de Género por Carrera (generales)
     const generoPorCarrera = await AlumnoCarrera.findAll({
       attributes: [
         "id_carrera",
@@ -45,15 +49,47 @@ exports.getEstadisticas = async (req, res, next) => {
       subQuery: false,
     });
 
-    // edad
+    //Estadísticas de Género por Carrera y Curso
+    //se usa la fecha de inscripción para obtener el Curso
+    const generoPorCarreraCurso = await AlumnoCarrera.findAll({
+      attributes: [
+        "id_carrera",
+        [literal("YEAR(`fecha_inscripcion`)"), "anio_inscripcion"],
+        [
+          literal('SUM(CASE WHEN `persona`.`sexo` = "M" THEN 1 ELSE 0 END)'),
+          "hombres",
+        ],
+        [
+          literal('SUM(CASE WHEN `persona`.`sexo` = "F" THEN 1 ELSE 0 END)'),
+          "mujeres",
+        ],
+        [
+          literal('SUM(CASE WHEN `persona`.`sexo` = "X" THEN 1 ELSE 0 END)'),
+          "noBin",
+        ],
+      ],
+      include: [
+        { model: Persona, as: "persona", attributes: ["sexo"] },
+        { model: Carrera, as: "carrera", attributes: ["nombre"] },
+      ],
+      group: ["id_carrera", "anio_inscripcion", col("carrera.nombre")],
+      raw: true,
+      subQuery: false,
+    });
+
+    // Estadísticas por edad
     const alumnosConEdad = await Persona.findAll({
       attributes: ["fecha_nacimiento"],
+      raw: true,
     });
 
     const rangos = {
-      "19-20": 0,
-      "21-22": 0,
-      "23-24": 0,
+      19: 0,
+      20: 0,
+      21: 0,
+      22: 0,
+      23: 0,
+      24: 0,
       "25-29": 0,
       "30-34": 0,
       "35+": 0,
@@ -61,9 +97,7 @@ exports.getEstadisticas = async (req, res, next) => {
 
     alumnosConEdad.forEach((alumno) => {
       const edad = calcularEdad(alumno.fecha_nacimiento);
-      if (edad >= 19 && edad <= 20) rangos["19-20"]++;
-      else if (edad >= 21 && edad <= 22) rangos["21-22"]++;
-      else if (edad >= 23 && edad <= 24) rangos["23-24"]++;
+      if (edad >= 19 && edad <= 24) rangos[edad.toString()]++;
       else if (edad >= 25 && edad <= 29) rangos["25-29"]++;
       else if (edad >= 30 && edad <= 34) rangos["30-34"]++;
       else if (edad >= 35) rangos["35+"]++;
@@ -74,29 +108,25 @@ exports.getEstadisticas = async (req, res, next) => {
       estudiantes: rangos[key],
     }));
 
-    // // cantidad por año
-    // const tipoEgresado = await AlumnoTipo.findOne({
-    //   where: { nombre: "Egresado" },
-    // });
-    // if (!tipoEgresado) {
-    //   return res
-    //     .status(404)
-    //     .json({ message: 'Tipo de alumno "Egresado" no encontrado.' });
-    // }
+    const egresadosPorAnio = await AlumnoCarrera.findAll({
+      where: { egresado: 1 },
+      attributes: [
+        [fn("YEAR", col("fecha_inscripcion")), "anio"],
+        [fn("COUNT", col("id")), "cantidad"],
+      ],
+      group: [fn("YEAR", col("fecha_inscripcion"))],
+      raw: true,
+    });
 
-    // const egresadosPorAnio = await AlumnoCarrera.findAll({
-    //   where: { id_tipo_alumno: tipoEgresado.id },
-    //   attributes: [
-    //     [fn("YEAR", col("fecha_inscripcion")), "anio"],
-    //     [fn("COUNT", col("id")), "cantidad"],
-    //   ],
-    //   group: [fn("YEAR", col("fecha_inscripcion"))],
-    //   raw: true,
-    // });
-
-    const estadisticas = { generoPorCarrera, rangoEtario };
+    const estadisticas = {
+      generoPorCarrera,
+      generoPorCarreraCurso,
+      rangoEtario,
+      egresadosPorAnio,
+    };
     res.status(200).json(estadisticas);
   } catch (err) {
+    console.error(err);
     next(err);
   }
 };
