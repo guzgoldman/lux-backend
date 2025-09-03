@@ -36,6 +36,7 @@ const alertaModel = require("./alerta");
 const asistenciaExamenFinalModel = require("./asistencia_examen_final");
 const historialAsistenciaExamenFinalModel = require("./historial_asistencia_examen_final");
 const horarioMateriaModel = require("./horario_materia");
+const calificacionCuatrimestreModel = require("./calificacion_cuatrimestre");
 
 const Persona = personaModel(sequelize, DataTypes);
 const Direccion = direccionModel(sequelize, DataTypes);
@@ -88,6 +89,7 @@ const HistorialAsistenciaExamenFinal = historialAsistenciaExamenFinalModel(
   DataTypes
 );
 const HorarioMateria = horarioMateriaModel(sequelize, DataTypes);
+const CalificacionCuatrimestre = calificacionCuatrimestreModel(sequelize, DataTypes);
 
 Persona.hasMany(Direccion, { foreignKey: "id_persona", as: "direcciones" });
 
@@ -204,7 +206,7 @@ ProfesorMateria.belongsTo(MateriaPlanCicloLectivo, {
 
 MateriaPlanCicloLectivo.hasMany(ProfesorMateria, {
   as: "profesores",
-  foreignKey: "id_materia_plan_ciclo_lectivo"
+  foreignKey: "id_materia_plan_ciclo_lectivo",
 });
 
 AlumnoCarrera.belongsTo(AlumnoTipo, {
@@ -482,6 +484,13 @@ InscripcionMateria.belongsTo(Usuario, {
   onUpdate: "CASCADE",
 });
 
+CalificacionCuatrimestre.belongsTo(InscripcionMateria, {
+  foreignKey: "id_inscripcion_materia",
+  as: "inscripcion",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
 MateriaPlanCicloLectivo.hasMany(InscripcionMateria, {
   foreignKey: "id_materia_plan_ciclo_lectivo",
   as: "inscripcionesCiclo",
@@ -529,6 +538,11 @@ InscripcionMateria.hasMany(Evaluacion, {
   as: "evaluaciones",
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
+});
+
+InscripcionMateria.hasMany(CalificacionCuatrimestre, {
+  as: 'calificaciones',
+  foreignKey: 'id_inscripcion_materia'
 });
 
 Evaluacion.belongsTo(InscripcionMateria, {
@@ -599,4 +613,5 @@ module.exports = {
   HorarioMateria,
   Preinscripcion,
   PreinscripcionEstado,
+  CalificacionCuatrimestre
 };

@@ -1,0 +1,63 @@
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Constancia de Alumno Regular</title>
+    <style>
+      @page { size: A4; margin: 12mm; } * { box-sizing: border-box; } body {
+      font-family: "Times New Roman", serif; font-size: 12pt; color: #111; }
+      header { display: flex; align-items: center; gap: 16px; border-bottom: 1px
+      solid #222; padding-bottom: 8px; margin-bottom: 12px; } header img.logo {
+      width: 128px; height: auto; } header .info { line-height: 1.15; font-size:
+      11pt; } h1 { text-align: center; margin: 18px 0 10px; font-size: 16pt;
+      letter-spacing: .5px; text-transform: uppercase; } .meta { text-align:
+      center; margin-bottom: 18px; font-size: 11pt; } .cuerpo { text-align:
+      justify; line-height: 1.4; } .firma { margin-top: 28mm; display: flex;
+      justify-content: center; } .firma .linea { border-top: 1px solid #000;
+      width: 70mm; text-align: center; padding-top: 4px; font-size: 10pt; } .pie
+      { margin-top: 12mm; border-top: 1px solid #222; padding-top: 8px;
+      font-size: 10pt; line-height: 1.25; text-align: center; } .resalt {
+      font-weight: bold; } .subtle { opacity: 0.9; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <img class="logo" src="data:image/png;base64,{{logoBase64}}" alt="Logo" />
+      <div class="info">
+        <div class="resalt">Instituto Superior Nuestra Señora de Luján del Buen
+          Viaje</div>
+        <div class="subtle">DIEGEP 4283 – Ruta 8 Nº 6725 (1657) Loma Hermosa -
+          San Martín - TE 5263-2395</div>
+        <div class="subtle">{{contacto}}</div>
+      </div>
+    </header>
+
+    <h1>Constancia de Alumno Regular</h1>
+
+    <div class="cuerpo">
+      La Secretaría del Instituto Superior Nuestra Señora de Luján del Buen Viaje (DIEGEP
+      4283) hace constar que
+      <span class="resalt">{{nombre}} {{apellido}}</span>, con DNI
+      <span class="resalt">{{dni}}</span>, es alumno/a regular de la/s carrera/s
+      {{#each carreras}}
+        <p>- {{nombre}} (Res. Nº {{resolucion}})</p>
+      {{/each}}
+      <br /><br />
+      A pedido del interesado y al solo efecto de ser presentada ante las
+      autoridades que correspondan, se extiende la presente constancia en Villa
+      Loma Hermosa, a los
+      {{dia}}
+      días del mes de
+      {{mes}}
+      del año
+      {{anio}}.
+    </div>
+
+    <div class="pie">
+      {{sitio}}
+      —
+      {{email}}
+    </div>
+  </body>
+</html>

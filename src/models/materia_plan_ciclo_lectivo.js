@@ -7,7 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       ciclo_lectivo:     { type: DataTypes.INTEGER, allowNull: false },
       fecha_inicio:      { type: DataTypes.DATEONLY },
       fecha_cierre:      { type: DataTypes.DATEONLY },
-      tipo_aprobacion:   { type: DataTypes.ENUM('EP', 'P', 'NP'), allowNull: false, defaultValue: 'P' }
+      tipo_aprobacion:   { type: DataTypes.ENUM('EP', 'P', 'NP'), allowNull: false }
     },
     {
       tableName: 'materia_plan_ciclo_lectivo',

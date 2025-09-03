@@ -11,7 +11,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       activo: { type: DataTypes.TINYINT, defaultValue: 1 },
       egresado: { type: DataTypes.TINYINT, defaultValue: 0 },
-      id_tipo_alumno: { type: DataTypes.INTEGER, allowNull: false },
     },
     {
       tableName: "alumno_carrera",

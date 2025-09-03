@@ -4,9 +4,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       id:                           { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
       id_materia_plan_ciclo_lectivo:{ type: DataTypes.INTEGER, allowNull: false },
-      tipo:                         { type: DataTypes.STRING(20), allowNull: false },
       fecha:                        { type: DataTypes.DATE },
-      temario:                      { type: DataTypes.TEXT, allowNull: false },
       estado:                       { type: DataTypes.STRING(20), defaultValue: 'PENDIENTE' },
       id_usuario_profesor:          { type: DataTypes.INTEGER, allowNull: false },
       creado_por:                   { type: DataTypes.INTEGER, allowNull: false },

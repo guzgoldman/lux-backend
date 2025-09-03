@@ -5,6 +5,7 @@ module.exports = (sequelize, DataTypes) => {
       id:                           { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
       id_usuario_alumno:            { type: DataTypes.INTEGER, allowNull: false },
       id_materia_plan_ciclo_lectivo:{ type: DataTypes.INTEGER, allowNull: false },
+      id_tipo_alumno:               { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 }, // 1 = Regular, 2 = Libre, 3 = Oyente, 4 = Itinerante
       fecha_inscripcion:            { type: DataTypes.DATE, defaultValue: sequelize.literal('CURRENT_TIMESTAMP') },
       estado:                       { type: DataTypes.STRING(20), defaultValue: 'INSCRIPTO' },
       nota_final:                   { type: DataTypes.DECIMAL(4,2) },
