@@ -3,7 +3,8 @@ const {
   Persona,
   Direccion,
   Preinscripcion,
-  Carrera
+  Carrera,
+  PreinscripcionEstado
 } = require("../../models");
 
 exports.createPreinscripcion = async (req, res, next) => {
@@ -86,3 +87,34 @@ exports.createPreinscripcion = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getEstadoPreinscripcion = async (req, res, next) => {
+  try {
+    const estado = await PreinscripcionEstado.findByPk(1);
+
+    res.status(200).json({
+      abierta: estado ? estado.abierta : 0
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.toggleEstadoPreinscripcion = async (req, res, next) => {
+  try {
+    const estado = await PreinscripcionEstado.findByPk(1);
+    
+    const nuevoEstado = estado.abierta ? 0 : 1;
+    
+    await estado.update({ abierta: nuevoEstado });
+
+    res.status(200).json({
+      message: `Preinscripciones ${nuevoEstado ? 'abiertas' : 'cerradas'}`,
+      abierta: nuevoEstado
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+

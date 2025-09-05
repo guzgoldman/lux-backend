@@ -12,6 +12,7 @@ const {
   Rol,
   PlanEstudio,
   MateriaPlan,
+  RolUsuario
 } = require("../../models");
 const bcrypt = require("bcrypt");
 
@@ -276,5 +277,120 @@ exports.actualizarPassword = async (req, res, next) => {
     res.json({ message: "Password actualizado correctamente" });
   } catch (error) {
     res.status(500).json({ message: "Error interno del servidor" });
+  }
+};
+
+// Controlador para listar todas las carreras disponibles
+exports.listarCarreras = async (req, res, next) => {
+  try {
+    const carreras = await Carrera.findAll({
+      attributes: ["id", "nombre"],
+      order: [["nombre", "ASC"]],
+    });
+
+    res.json(carreras);
+  } catch (error) {
+    console.error("Error al listar carreras:", error);
+    next(error);
+  }
+};
+
+// Controlador para listar todos los alumnos
+exports.listarAlumnos = async (req, res, next) => {
+  try {
+    const { activo, carrera } = req.query;
+
+    // Construir condiciones de filtrado
+    const whereConditions = {
+      '$rol_usuarios.rol.nombre$': "Alumno",
+    };
+
+    const carreraInclude = {
+      model: AlumnoCarrera,
+      as: "carreras",
+      attributes: ["fecha_inscripcion", "activo"],
+      include: [
+        {
+          model: Carrera,
+          as: "carrera",
+          attributes: ["id", "nombre"],
+        },
+      ],
+      required: false, // LEFT JOIN para no excluir usuarios sin carreras
+    };
+
+    // Aplicar filtros específicos si se proporcionan
+    if (activo !== undefined || carrera) {
+      const carreraWhere = {};
+      
+      if (activo !== undefined) {
+        carreraWhere.activo = activo === 'true' ? 1 : 0;
+      }
+      
+      if (carrera) {
+        carreraWhere.id_carrera = carrera;
+      }
+      
+      carreraInclude.where = carreraWhere;
+      carreraInclude.required = true; // INNER JOIN cuando hay filtros específicos
+    }
+
+    const alumnos = await Usuario.findAll({
+      include: [
+        {
+          model: Persona,
+          as: "persona",
+          attributes: ["nombre", "apellido", "dni", "email", "telefono"],
+          include: [carreraInclude],
+          required: true, // Asegurar que siempre tenga persona
+        },
+        {
+          model: RolUsuario,
+          as: "rol_usuarios",
+          include: [
+            {
+              model: Rol,
+              as: "rol",
+              attributes: ["id", "nombre"],
+              where: { nombre: "Alumno" },
+            },
+          ],
+          required: true,
+        },
+      ],
+      where: whereConditions,
+    });
+
+    const alumnosFormateados = alumnos.map((alumno) => {
+      // Validar que persona existe
+      if (!alumno.persona) {
+        console.warn(`Usuario ${alumno.id} sin persona asociada`);
+        return null;
+      }
+
+      const carreras = alumno.persona.carreras || [];
+      const carreraActiva = carreras.find((c) => c.activo === 1) || carreras[0];
+
+      return {
+        id: alumno.id,
+        username: alumno.username,
+        nombre: alumno.persona.nombre,
+        apellido: alumno.persona.apellido,
+        dni: alumno.persona.dni,
+        email: alumno.persona.email,
+        telefono: alumno.persona.telefono,
+        carrera: {
+          id: carreraActiva?.carrera?.id || null,
+          nombre: carreraActiva?.carrera?.nombre || "Sin carrera"
+        },
+        fechaInscripcion: carreraActiva?.fecha_inscripcion || null,
+        activo: carreraActiva?.activo === 1,
+      };
+    }).filter(alumno => alumno !== null); // Filtrar elementos nulos
+
+    res.json(alumnosFormateados);
+  } catch (error) {
+    console.error("Error al listar alumnos:", error);
+    next(error);
   }
 };

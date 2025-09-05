@@ -205,6 +205,8 @@ exports.detalleMateriaPlanCicloLectivo = async (req, res, next) => {
       materia: ciclo.materiaPlan?.materia?.nombre,
       resolucion: ciclo.materiaPlan?.planEstudio?.resolucion,
       carrera: ciclo.materiaPlan?.planEstudio?.carrera?.nombre,
+      fechaInicio: ciclo.fecha_inicio,
+      fechaCierre: ciclo.fecha_cierre,
       alumnos: (ciclo.inscripcionesCiclo || []).map((ins) => ({
         id_usuario: ins.usuario?.id,
         nombre: ins.usuario?.persona?.nombre,
