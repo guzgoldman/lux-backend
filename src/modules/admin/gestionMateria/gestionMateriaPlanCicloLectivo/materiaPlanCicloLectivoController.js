@@ -258,6 +258,10 @@ exports.asignarProfesor = async (req, res, next) => {
 
     res.status(201).json({ message: "Profesor asignado a la materia" });
   } catch (err) {
+    // Si hay entrada duplicada, retornar error amigable
+    if (err.name === 'SequelizeUniqueConstraintError' || (err.original && err.original.code === 'ER_DUP_ENTRY')) {
+      return res.status(400).json({ error: 'El profesor ya está asignado a esta materia' });
+    }
     next(err);
   }
 };

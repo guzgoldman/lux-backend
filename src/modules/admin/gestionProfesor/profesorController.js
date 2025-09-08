@@ -4,8 +4,15 @@ const {
   Usuario,
   Rol,
   RolUsuario,
+  ProfesorMateria,
+  MateriaPlanCicloLectivo,
+  MateriaPlan,
+  Materia,
+  PlanEstudio,
+  Carrera,
   sequelize,
 } = require("../../../models");
+const { Op } = require("sequelize");
 
 exports.listarProfesores = async (req, res, next) => {
   try {
@@ -21,19 +28,100 @@ exports.listarProfesores = async (req, res, next) => {
         {
           model: Persona,
           as: "persona",
-          attributes: ["nombre", "apellido", "dni"],
+          attributes: ["nombre", "apellido", "dni", "email", "telefono"],
         },
       ],
       attributes: ["id", "username"],
     });
-    res.json(profesores);
+
+    // Obtener la fecha actual en formato YYYY-MM-DD
+    const fechaActual = new Date().toISOString().split('T')[0];
+
+    // Para cada profesor, obtener sus materias asignadas
+    const profesoresConMaterias = await Promise.all(
+      profesores.map(async (profesor) => {
+        const materiasAsignadas = await ProfesorMateria.findAll({
+          where: { id_usuario_profesor: profesor.id },
+          include: [
+            {
+              model: MateriaPlanCicloLectivo,
+              as: "ciclo",
+              where: {
+                // Materias activas: sin fecha de cierre O fecha actual menor a fecha_cierre
+                [Op.or]: [
+                  { fecha_cierre: null },
+                  { fecha_cierre: '0000-00-00' },
+                  { fecha_cierre: { [Op.gt]: fechaActual } }
+                ]
+              },
+              include: [
+                {
+                  model: MateriaPlan,
+                  as: "materiaPlan",
+                  include: [
+                    {
+                      model: Materia,
+                      as: "materia",
+                      attributes: ["id", "nombre"],
+                    },
+                    {
+                      model: PlanEstudio,
+                      as: "planEstudio",
+                      attributes: ["id", "resolucion"],
+                      include: [
+                        {
+                          model: Carrera,
+                          as: "carrera",
+                          attributes: ["id", "nombre"],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        });
+
+        const materiasInfo = materiasAsignadas.map((asignacion) => {
+          const fechaCierre = asignacion.ciclo?.fecha_cierre;
+          let estadoMateria = 'Activa';
+          
+          if (fechaCierre && fechaCierre !== '0000-00-00') {
+            const fechaCierreDate = new Date(fechaCierre);
+            const hoy = new Date();
+            estadoMateria = fechaCierreDate > hoy ? 'Activa' : 'Cerrada';
+          }
+
+          return {
+            id: asignacion.ciclo?.id,
+            nombre: asignacion.ciclo?.materiaPlan?.materia?.nombre,
+            carrera: asignacion.ciclo?.materiaPlan?.planEstudio?.carrera?.nombre,
+            resolucion: asignacion.ciclo?.materiaPlan?.planEstudio?.resolucion,
+            cicloLectivo: asignacion.ciclo?.ciclo_lectivo,
+            rol: asignacion.rol,
+            fechaInicio: asignacion.ciclo?.fecha_inicio,
+            fechaCierre: asignacion.ciclo?.fecha_cierre,
+            estado: estadoMateria,
+          };
+        });
+
+        return {
+          ...profesor.toJSON(),
+          materiasAsignadas: materiasInfo,
+          totalMaterias: materiasInfo.length,
+        };
+      })
+    );
+
+    res.json(profesoresConMaterias);
   } catch (err) {
     next(err);
   }
 };
 
 exports.registrarProfesor = async (req, res, next) => {
-  const { nombre, apellido, sexo, email, dni, telefono, fecha_nacimiento } =
+  const { nombre, apellido, sexo, email, dni, telefono, nacionalidad, fecha_nacimiento } =
     req.body;
 
   try {
@@ -47,6 +135,7 @@ exports.registrarProfesor = async (req, res, next) => {
           !sexo ||
           !email ||
           !telefono ||
+          !nacionalidad ||
           !fecha_nacimiento
         ) {
           throw new Error("Faltan datos para crear la persona");
@@ -59,6 +148,7 @@ exports.registrarProfesor = async (req, res, next) => {
             email,
             dni,
             telefono,
+            nacionalidad,
             fecha_nacimiento,
           },
           { transaction: t }
