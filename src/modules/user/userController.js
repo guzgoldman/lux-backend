@@ -11,8 +11,6 @@ const {
   Carrera,
   Rol,
   PlanEstudio,
-  MateriaPlan,
-  ProfesorMateria,
 } = require("../../models");
 const bcrypt = require("bcrypt");
 
@@ -102,13 +100,11 @@ exports.perfil = async (req, res, next) => {
     const aprobadas = usuario.inscripciones.filter(
       (i) => i.estado === "APROBADA"
     ).length;
-
-    const todasNotas = usuario.inscripciones.flatMap((i) => i.evaluaciones);
     const promedio =
-      todasNotas.length > 0
-        ? todasNotas.reduce((sum, ev) => sum + parseFloat(ev.nota || 0), 0) /
-          todasNotas.length
-        : 0;
+      usuario.inscripciones
+        .flatMap((i) => i.evaluaciones)
+        .reduce((sum, ev) => sum + parseFloat(ev.nota), 0) /
+        usuario.inscripciones.flatMap((i) => i.evaluaciones).length || 0;
 
     const tipoAlumnoMap = {
       1: "Regular",
@@ -117,26 +113,28 @@ exports.perfil = async (req, res, next) => {
       4: "Itinerante",
     };
 
-    const carreras = usuario.persona.carreras || [];
+    const carreras = usuario.persona.carreras;
     let carreraActiva =
       carreras.find((c) => c.activo === 1) || carreras[0] || {};
-    const idTipo = carreraActiva?.id_tipo_alumno;
+    const idTipo = carreraActiva.id_tipo_alumno;
 
     const informacionPersonal = {
       nombre: `${usuario.persona.nombre} ${usuario.persona.apellido}`,
       fechaNacimiento: usuario.persona.fecha_nacimiento,
       dni: usuario.persona.dni,
-      ingreso: carreraActiva?.fecha_inscripcion || null,
+      ingreso: carreraActiva.fecha_inscripcion
+        ? carreraActiva.fecha_inscripcion
+        : null,
       condicion: tipoAlumnoMap[idTipo] || "Desconocido",
-      carrera: carreras.map((c) => c.carrera?.nombre).join(", "),
+      carrera: carreras.map((c) => c.carrera.nombre).join(", "),
     };
 
     res.json({
       informacionPersonal,
       estadisticas: [
         { iconoKey: "promedio", valor: promedio.toFixed(1) },
-        { iconoKey: "materias", valor: totalMaterias },
-        { iconoKey: "aprobadas", valor: `${aprobadas}/${totalMaterias}` },
+        { iconoKey: "materias", valor: `${'totalMaterias'}` },
+        { iconoKey: "aprobadas", valor: `${'aprobadas'}/${'totalMaterias'}` },
       ],
       horarios: usuario.inscripciones.flatMap((i) =>
         i.ciclo.horarios.map((h) => ({
@@ -233,6 +231,7 @@ exports.actualizarPassword = async (req, res, next) => {
   }
 };
 
+//Obtener las carreras en las que se inscribió el alumno
 exports.getCarrerasInscripto = async (req, res) => {
   try {
     const { idAlumno } = req.params;
@@ -248,6 +247,7 @@ exports.getCarrerasInscripto = async (req, res) => {
       ],
     });
 
+    // Extraer las carreras de las inscripciones
     const carreras = inscripciones.map((inscripcion) => inscripcion.carrera);
 
     if (!carreras.length) {
@@ -263,6 +263,7 @@ exports.getCarrerasInscripto = async (req, res) => {
   }
 };
 
+//Obtener las materias de un alumno para una carrera especifica
 exports.getMateriasPorCarrera = async (req, res) => {
   try {
     const { idAlumno, idCarrera } = req.params;
@@ -277,9 +278,10 @@ exports.getMateriasPorCarrera = async (req, res) => {
     if (!inscripcion) {
       return res
         .status(404)
-        .json({ message: "El alumno no esta inscripto en esta carrera." });
+        .json({ message: "El alumno no esta inscripto en esta carrera. " });
     }
 
+    // Obtener todos los planes de estudio para la carrera
     const planesEstudio = await PlanEstudio.findAll({
       where: { id_carrera: idCarrera },
       attributes: ["id"],
@@ -293,6 +295,7 @@ exports.getMateriasPorCarrera = async (req, res) => {
 
     const planEstudioIds = planesEstudio.map((plan) => plan.id);
 
+    //Obtener las materias en las que se inscribio el alumno en esa carrera
     const materiasInscriptas = await InscripcionMateria.findAll({
       where: { id_usuario_alumno: idAlumno },
       include: [
@@ -315,9 +318,11 @@ exports.getMateriasPorCarrera = async (req, res) => {
                 },
               ],
             },
+
             {
               model: ProfesorMateria,
               as: "profesores",
+              attributes: [],
               include: [
                 {
                   model: Persona,
@@ -331,12 +336,13 @@ exports.getMateriasPorCarrera = async (req, res) => {
       ],
     });
 
+    // Función que transforma los datos para el frontend
     const resumenMateriasAlumno = materiasInscriptas.map((item) => ({
       id: item.ciclo.materia.id,
       nombre: item.ciclo.materia.nombre,
       estado: item.estado,
       nota: item.nota_final,
-      profesor: item.ciclo.profesores?.length
+      profesor: item.ciclo.profesores
         ? item.ciclo.profesores
             .map((p) => `${p.persona.nombre} ${p.persona.apellido}`)
             .join(", ")

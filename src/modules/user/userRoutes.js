@@ -1,13 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const { perfil, mostrarDatosPersonales, actualizarDatosPersonales, actualizarPassword, listarAlumnos, listarCarreras} = require("./userController");
+const { perfil, mostrarDatosPersonales, actualizarDatosPersonales, actualizarPassword} = require("./userController");
 const { verifyToken, requireRole } = require("../../middlewares/auth");
 
 router.get("/perfil", verifyToken, perfil);
 router.get("/perfil/:id", verifyToken, requireRole("Administrador"), perfil);
-
-router.get("/listar-alumnos", verifyToken, requireRole("Administrador"), listarAlumnos);
-router.get("/listar-carreras", verifyToken, requireRole("Administrador"), listarCarreras);
 
 router.get("/:id/datos-personales", verifyToken, mostrarDatosPersonales);
 router.put("/:id/actualizar-datos-personales", verifyToken, actualizarDatosPersonales);
