@@ -9,8 +9,6 @@ const { verifyToken, requireRole } = require("../../middlewares/auth");
 router.post("/", createPreinscripcion);
 router.get(
   "/estado",
-  verifyToken,
-  requireRole("Administrador"),
   getEstadoPreinscripcion
 );
 router.post(

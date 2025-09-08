@@ -4,12 +4,20 @@ const {
   Direccion,
   Preinscripcion,
   Carrera,
-  PreinscripcionEstado
+  PreinscripcionEstado,
 } = require("../../models");
 
 exports.createPreinscripcion = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
+    const estado = await PreinscripcionEstado.findByPk(1);
+    if (!estado || estado.abierta === 0) {
+      await t.rollback();
+      return res.status(403).json({
+        error: "Las preinscripciones están actualmente cerradas",
+      });
+    }
+
     let persona = await Persona.findOne({
       where: { dni: req.body.numeroDocumento },
       transaction: t,
@@ -54,16 +62,15 @@ exports.createPreinscripcion = async (req, res, next) => {
     await t.commit();
 
     let fechaHora =
-      preinscripcion.createdAt ||
-      preinscripcion.fecha_creacion ||
-      Date.now();
+      preinscripcion.createdAt || preinscripcion.fecha_creacion || Date.now();
 
     fechaHora = new Date(fechaHora);
     if (isNaN(fechaHora.getTime())) fechaHora = new Date();
 
-    const registrationNumber = `PR-${String(
-      preinscripcion.id
-    ).padStart(5, "0")}`;
+    const registrationNumber = `PR-${String(preinscripcion.id).padStart(
+      5,
+      "0"
+    )}`;
 
     const submissionDate = fechaHora.toLocaleDateString("es-AR");
     const submissionTime = fechaHora.toLocaleTimeString("es-AR", {
@@ -93,7 +100,7 @@ exports.getEstadoPreinscripcion = async (req, res, next) => {
     const estado = await PreinscripcionEstado.findByPk(1);
 
     res.status(200).json({
-      abierta: estado ? estado.abierta : 0
+      abierta: estado ? estado.abierta : 0,
     });
   } catch (error) {
     next(error);
@@ -103,18 +110,16 @@ exports.getEstadoPreinscripcion = async (req, res, next) => {
 exports.toggleEstadoPreinscripcion = async (req, res, next) => {
   try {
     const estado = await PreinscripcionEstado.findByPk(1);
-    
+
     const nuevoEstado = estado.abierta ? 0 : 1;
-    
+
     await estado.update({ abierta: nuevoEstado });
 
     res.status(200).json({
-      message: `Preinscripciones ${nuevoEstado ? 'abiertas' : 'cerradas'}`,
-      abierta: nuevoEstado
+      message: `Preinscripciones ${nuevoEstado ? "abiertas" : "cerradas"}`,
+      abierta: nuevoEstado,
     });
   } catch (error) {
     next(error);
   }
 };
-
-
