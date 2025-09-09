@@ -15,6 +15,7 @@ const {
   RolUsuario
 } = require("../../models");
 const bcrypt = require("bcrypt");
+const { Op } = require("sequelize");
 
 exports.perfil = async (req, res, next) => {
   try {
@@ -128,13 +129,13 @@ exports.perfil = async (req, res, next) => {
     }
 
     const aprobadas = usuario.inscripciones.filter(
-      (i) => i.estado === "APROBADA"
+      (i) => i.estado === "Aprobada"
     ).length;
     
     // Contar materias únicas aprobadas por el alumno
     const materiasAprobadasIds = new Set();
     usuario.inscripciones
-      .filter((i) => i.estado === "APROBADA")
+      .filter((i) => i.estado === "Aprobada")
       .forEach((i) => {
         if (i.ciclo && i.ciclo.materiaPlan && i.ciclo.materiaPlan.id_materia) {
           materiasAprobadasIds.add(i.ciclo.materiaPlan.id_materia);
@@ -391,6 +392,49 @@ exports.listarAlumnos = async (req, res, next) => {
     res.json(alumnosFormateados);
   } catch (error) {
     console.error("Error al listar alumnos:", error);
+    next(error);
+  }
+};
+// Controlador para buscar alumnos por DNI o nombre
+exports.buscarAlumnos = async (req, res, next) => {
+  try {
+    const term = req.query.term;
+    if (!term) {
+      return res.status(400).json({ message: "Término de búsqueda requerido" });
+    }
+    const alumnos = await Usuario.findAll({
+      where: {},
+      include: [
+        {
+          model: Persona,
+          as: "persona",
+          attributes: ["nombre", "apellido", "dni"],
+          where: {
+            [Op.or]: [
+              { dni: { [Op.like]: `%${term}%` } },
+              { nombre: { [Op.like]: `%${term}%` } },
+              { apellido: { [Op.like]: `%${term}%` } },
+            ],
+          },
+        },
+        {
+          model: RolUsuario,
+          as: "rol_usuarios",
+          include: [
+            { model: Rol, as: "rol", where: { nombre: "Alumno" } },
+          ],
+        },
+      ],
+      limit: 10,
+    });
+    const resultados = alumnos.map((a) => ({
+      id: a.id,
+      nombre: a.persona.nombre,
+      apellido: a.persona.apellido,
+      dni: a.persona.dni,
+    }));
+    res.json(resultados);
+  } catch (error) {
     next(error);
   }
 };

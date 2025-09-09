@@ -27,7 +27,7 @@ router.post(
 router.get(
   "/listar-materias",
   verifyToken,
-  requireRole("Administrador"),
+  requireRole("Administrador", "Profesor"),
   listarMateriasPlanCicloLectivo
 );
 

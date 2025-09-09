@@ -32,6 +32,7 @@ exports.createPreinscripcion = async (req, res, next) => {
           dni: req.body.numeroDocumento,
           email: req.body.email,
           telefono: req.body.telefono,
+          nacionalidad: req.body.nacionalidad,
           fecha_nacimiento: req.body.fechaNacimiento,
         },
         { transaction: t }

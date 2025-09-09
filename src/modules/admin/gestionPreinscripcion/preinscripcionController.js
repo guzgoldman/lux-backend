@@ -154,7 +154,7 @@ exports.ocultar = async (req, res, next) => {
       if (!persona) throw new Error("Persona no encontrada");
 
       await Preinscripcion.update(
-        { estado: "Oculta", visible: 0 },
+        { visible: 0 },
         { where: { id_persona: persona.id }, transaction: t }
       );
 
