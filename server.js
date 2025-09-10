@@ -7,6 +7,8 @@ const PORT = process.env.PORT || 3000;
 async function start() {
   try {
     await sequelize.authenticate();
+    // Iniciar worker de procesamiento de emails
+    require('./src/workers/email.worker');
     // - force: true  => borra y vuelve a crear TODAS las tablas
     // - alter: true  => modifica las tablas para adaptarlas a los modelos
     // await sequelize.sync({ alter: true });
