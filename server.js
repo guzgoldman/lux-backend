@@ -7,11 +7,28 @@ const PORT = process.env.PORT || 3000;
 async function start() {
   try {
     await sequelize.authenticate();
-    // Iniciar worker de procesamiento de emails
-    require('./src/workers/email.worker');
-    // - force: true  => borra y vuelve a crear TODAS las tablas
-    // - alter: true  => modifica las tablas para adaptarlas a los modelos
-    // await sequelize.sync({ alter: true });
+
+    require("./src/workers/email.worker");
+
+    if (process.env.NODE_ENV !== "production") {
+      const { createBullBoard } = require("@bull-board/api");
+      const { BullMQAdapter } = require("@bull-board/api/bullMQAdapter");
+      const { ExpressAdapter } = require("@bull-board/express");
+      const { emailQueue } = require("./src/queues/email.queue");
+
+      const serverAdapter = new ExpressAdapter();
+      serverAdapter.setBasePath("/admin/queues");
+
+      createBullBoard({
+        queues: [new BullMQAdapter(emailQueue)],
+        serverAdapter: serverAdapter,
+      });
+
+      app.use("/admin/queues", serverAdapter.getRouter());
+      console.log(
+        "📊 Bull Board disponible en http://localhost:3000/admin/queues"
+      );
+    }
 
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`🚀 Server corriendo en http://0.0.0.0:${PORT}`);

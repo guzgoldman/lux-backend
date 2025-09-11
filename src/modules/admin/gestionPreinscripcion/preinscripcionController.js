@@ -69,6 +69,7 @@ exports.aceptar = async (req, res, next) => {
         where: { id_persona: persona.id, estado: "Pendiente", visible: 1 },
         transaction: t,
       });
+      
       if (!preinscripcion)
         throw new Error(
           "No se encontró una preinscripción pendiente para esta persona."
