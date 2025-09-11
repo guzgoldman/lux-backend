@@ -6,7 +6,7 @@ const {
   Carrera,
   PreinscripcionEstado,
 } = require("../../models");
-const { enqueueEmail } = require("../../../queues/email.queue");
+  const { enqueueEmail } = require("../../queues/email.queue")
 
 exports.createPreinscripcion = async (req, res, next) => {
   const t = await sequelize.transaction();
@@ -107,9 +107,25 @@ exports.createPreinscripcion = async (req, res, next) => {
             Saludos,
             Secretaría del Instituto Nuestra Señora de Luján del Buen Viaje`,
         html: `<p>Hola ${persona.nombre},</p>
-            <p>Tu preinscripción ha sido <strong>aprobada</strong>. Podés acceder al sistema LUX con:</p>
-            <ul><li>Usuario: ${usuario.username}</li><li>Contraseña: tu DNI</li></ul>
-            <p>Éxitos en la carrera, estamos a tu disposición en todo momento.</p>
+            <p>Recibimos tu preinscripción a la carrera de ${
+              carrera ? carrera.nombre : req.body.carrera
+            }.</p>
+            <p>Tu número de registro es <strong>${registrationNumber}</strong>, realizada el <strong>${submissionDate}</strong> a las <strong>${submissionTime}</strong>.</p>
+            <p>Para concretar tu inscripción al instituto, deberás presentarte en Secretaría con la siguiente documentación:</p>
+            <ul>
+            <li>Fotocopia de DNI</li>
+            <li>Analítico o Constancia de analítico en trámite</li>
+            <li>2 fotos 4x4</li>
+            <li>Apto psicofísico emitido por cualquier médico matriculado</li>
+            <li>Fotocopia de Partida de Nacimiento</li>
+            </ul>
+            <br/>
+            <p>Asimismo, deberás firmar el formulario de inscripción que te entregaremos en el momento.</p>
+            <p>Podés asistir de Lunes a Viernes de 19hs. a 21:30hs. en Ruta 8 Nº 6725, 2º piso.</p>
+            <br/>
+            <p>Ante cualquier duda, podés contactarnos al 5263-2395 o por nuestro email: terciario@lujanbuenviaje.edu.ar</p>
+            <br/>
+            <p>Te esperamos.</p>
             <p>Saludos,<br/>Secretaría del Instituto Nuestra Señora de Luján del Buen Viaje</p>`,
       });
     } catch (queueErr) {
