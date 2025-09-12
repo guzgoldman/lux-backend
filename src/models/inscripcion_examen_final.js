@@ -4,6 +4,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       id_usuario_alumno: { type: DataTypes.INTEGER, primaryKey: true },
       id_examen_final:   { type: DataTypes.INTEGER, primaryKey: true },
+      id_inscripcion_materia: { type: DataTypes.INTEGER, allowNull: false },
       fecha_inscripcion: { type: DataTypes.DATE, defaultValue: sequelize.literal('CURRENT_TIMESTAMP') },
       nota:              { type: DataTypes.DECIMAL(4,2) },
       bloqueada:         { type: DataTypes.BOOLEAN, defaultValue: false },
