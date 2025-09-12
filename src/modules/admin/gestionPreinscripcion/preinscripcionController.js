@@ -8,8 +8,8 @@ const {
   Preinscripcion,
   sequelize,
 } = require("../../../models");
-
 const { Op } = require("sequelize");
+const { enqueueEmail } = require("../../../queues/email.queue");
 
 exports.listarPreinscripcion = async (req, res, next) => {
   try {
@@ -69,6 +69,7 @@ exports.aceptar = async (req, res, next) => {
         where: { id_persona: persona.id, estado: "Pendiente", visible: 1 },
         transaction: t,
       });
+      
       if (!preinscripcion)
         throw new Error(
           "No se encontró una preinscripción pendiente para esta persona."
@@ -135,10 +136,34 @@ exports.aceptar = async (req, res, next) => {
           { transaction: t }
         );
       }
+      // Encolar email de confirmación para envío asíncrono
+      try {
+        await enqueueEmail({
+          to: persona.email,
+          subject: "ISNSLBV | Bienvenido al instituto",
+          text: 
+            `Hola ${persona.nombre},
+            Tu preinscripción ha sido aprobada. Podés acceder al sistema LUX con:
+            Usuario: ${usuario.username}
+            Contraseña: tu DNI
+
+            Éxitos en la carrera, estamos a tu disposición en todo momento.
+            Saludos,
+            Secretaría del Instituto Nuestra Señora de Luján del Buen Viaje`,
+          html: 
+            `<p>Hola ${persona.nombre},</p>
+            <p>Tu preinscripción ha sido <strong>aprobada</strong>. Podés acceder al sistema LUX con:</p>
+            <ul><li>Usuario: ${usuario.username}</li><li>Contraseña: tu DNI</li></ul>
+            <p>Éxitos en la carrera, estamos a tu disposición en todo momento.</p>
+            <p>Saludos,<br/>Secretaría del Instituto Nuestra Señora de Luján del Buen Viaje</p>`,
+        });
+      } catch (queueErr) {
+        console.error("Error al encolar email de confirmación:", queueErr);
+      }
 
       res
         .status(201)
-        .json({ usuarioId: usuario.id, username: usuario.username });
+        .json({ message: "Preinscripción aprobada y usuario creado" });
     });
   } catch (err) {
     next(err);
@@ -154,7 +179,7 @@ exports.ocultar = async (req, res, next) => {
       if (!persona) throw new Error("Persona no encontrada");
 
       await Preinscripcion.update(
-        { estado: "Oculta", visible: 0 },
+        { visible: 0 },
         { where: { id_persona: persona.id }, transaction: t }
       );
 

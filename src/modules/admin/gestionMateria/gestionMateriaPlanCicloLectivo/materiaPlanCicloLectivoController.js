@@ -47,39 +47,76 @@ exports.registrarMateriaPlanCicloLectivo = async (req, res, next) => {
 
 exports.listarMateriasPlanCicloLectivo = async (req, res, next) => {
   try {
-    const materiasPlanCicloLectivo = await MateriaPlanCicloLectivo.findAll({
-      include: [
-        {
-          model: MateriaPlan,
-          as: "materiaPlan",
-          include: [
-            {
-              model: PlanEstudio,
-              as: "planEstudio",
-              include: [{ model: Carrera, as: "carrera" }],
-            },
-            { model: Materia, as: "materia" },
-          ],
-        },
-        {
-          model: ProfesorMateria,
-          as: "profesores",
-          include: [
-            {
-              model: Usuario,
-              as: "profesor",
-              include: [
-                {
-                  model: Persona,
-                  as: "persona",
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    });
-    res.status(200).json(materiasPlanCicloLectivo);
+    const rolUsuario = req.user.rol;
+    if (rolUsuario === "Profesor") {
+      // Si el usuario es profesor, listar solo las materias que dicta
+      const profesorId = req.user.id;
+      const materiasPlanCicloLectivo = await MateriaPlanCicloLectivo.findAll({
+        include: [
+          {
+            model: MateriaPlan,
+            as: "materiaPlan",
+            include: [
+              {
+                model: PlanEstudio,
+                as: "planEstudio",
+                include: [{ model: Carrera, as: "carrera" }],
+              },
+              { model: Materia, as: "materia" },
+            ],
+          },
+          {
+            model: ProfesorMateria,
+            as: "profesores",
+            where: { id_usuario_profesor: profesorId },
+            include: [
+              {
+                model: Usuario,
+                as: "profesor",
+                include: [
+                  { model: Persona, as: "persona" },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+      res.status(200).json(materiasPlanCicloLectivo);
+    } else if (rolUsuario === "Administrador") {
+      const materiasPlanCicloLectivo = await MateriaPlanCicloLectivo.findAll({
+        include: [
+          {
+            model: MateriaPlan,
+            as: "materiaPlan",
+            include: [
+              {
+                model: PlanEstudio,
+                as: "planEstudio",
+                include: [{ model: Carrera, as: "carrera" }],
+              },
+              { model: Materia, as: "materia" },
+            ],
+          },
+          {
+            model: ProfesorMateria,
+            as: "profesores",
+            include: [
+              {
+                model: Usuario,
+                as: "profesor",
+                include: [
+                  {
+                    model: Persona,
+                    as: "persona",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+      res.status(200).json(materiasPlanCicloLectivo);
+    }
   } catch (err) {
     next(err);
   }
@@ -259,8 +296,13 @@ exports.asignarProfesor = async (req, res, next) => {
     res.status(201).json({ message: "Profesor asignado a la materia" });
   } catch (err) {
     // Si hay entrada duplicada, retornar error amigable
-    if (err.name === 'SequelizeUniqueConstraintError' || (err.original && err.original.code === 'ER_DUP_ENTRY')) {
-      return res.status(400).json({ error: 'El profesor ya está asignado a esta materia' });
+    if (
+      err.name === "SequelizeUniqueConstraintError" ||
+      (err.original && err.original.code === "ER_DUP_ENTRY")
+    ) {
+      return res
+        .status(400)
+        .json({ error: "El profesor ya está asignado a esta materia" });
     }
     next(err);
   }
@@ -391,38 +433,38 @@ exports.obtenerCalificacionesCuatrimestre = async (req, res, next) => {
   try {
     const inscripciones = await InscripcionMateria.findAll({
       where: { id_materia_plan_ciclo_lectivo: id },
-      attributes: ['id', 'estado'],
+      attributes: ["id", "estado"],
       include: [
         {
           model: Usuario,
-          as: 'usuario',
-          attributes: ['id'],
+          as: "usuario",
+          attributes: ["id"],
           include: [
             {
               model: Persona,
-              as: 'persona',
-              attributes: ['nombre', 'apellido']
-            }
-          ]
+              as: "persona",
+              attributes: ["nombre", "apellido"],
+            },
+          ],
         },
         {
           model: CalificacionCuatrimestre,
-          as: 'calificaciones',
+          as: "calificaciones",
           where: { cuatrimestre: periodo },
-          required: false // Para incluir alumnos que aún no tienen calificación
-        }
-      ]
+          required: false, // Para incluir alumnos que aún no tienen calificación
+        },
+      ],
     });
 
-    const calificaciones = inscripciones.map(inscripcion => ({
+    const calificaciones = inscripciones.map((inscripcion) => ({
       inscripcionId: inscripcion.id, // Ahora enviamos el ID de inscripción
       alumno: {
         id: inscripcion.usuario.id,
         nombre: inscripcion.usuario.persona.nombre,
-        apellido: inscripcion.usuario.persona.apellido
+        apellido: inscripcion.usuario.persona.apellido,
       },
       calificacion: inscripcion.calificaciones?.[0]?.calificacion || null,
-      bloqueada: inscripcion.calificaciones?.[0]?.bloqueada || false
+      bloqueada: inscripcion.calificaciones?.[0]?.bloqueada || false,
     }));
 
     res.json(calificaciones);
@@ -439,31 +481,39 @@ exports.actualizarCalificacionCuatrimestre = async (req, res, next) => {
   try {
     // Validar que la calificación esté entre 0 y 10
     if (calificacion < 0 || calificacion > 10) {
-      return res.status(400).json({ error: "La calificación debe estar entre 0 y 10" });
+      return res
+        .status(400)
+        .json({ error: "La calificación debe estar entre 0 y 10" });
     }
 
     // Buscar o crear la calificación
-    const [calificacionCuatrimestre, created] = await CalificacionCuatrimestre.findOrCreate({
-      where: { 
-        id_inscripcion_materia: inscripcionId,
-        cuatrimestre: cuatrimestre
-      },
-      defaults: {
-        calificacion: calificacion,
-        bloqueada: true // Al crear una nueva calificación, se bloquea automáticamente
-      }
-    });
+    const [calificacionCuatrimestre, created] =
+      await CalificacionCuatrimestre.findOrCreate({
+        where: {
+          id_inscripcion_materia: inscripcionId,
+          cuatrimestre: cuatrimestre,
+        },
+        defaults: {
+          calificacion: calificacion,
+          bloqueada: true, // Al crear una nueva calificación, se bloquea automáticamente
+        },
+      });
 
     // Si la calificación está bloqueada y el usuario no es administrador
-    if (!created && calificacionCuatrimestre.bloqueada && userRole !== 'Administrador') {
-      return res.status(403).json({ 
-        error: "La calificación está bloqueada. Solo un administrador puede modificarla."
+    if (
+      !created &&
+      calificacionCuatrimestre.bloqueada &&
+      userRole !== "Administrador"
+    ) {
+      return res.status(403).json({
+        error:
+          "La calificación está bloqueada. Solo un administrador puede modificarla.",
       });
     }
 
     if (!created) {
       calificacionCuatrimestre.calificacion = calificacion;
-      calificacionCuatrimestre.bloqueada = userRole !== 'Administrador'; // Solo se mantiene desbloqueada si es admin
+      calificacionCuatrimestre.bloqueada = userRole !== "Administrador"; // Solo se mantiene desbloqueada si es admin
       await calificacionCuatrimestre.save();
     }
 

@@ -15,6 +15,7 @@ const {
   ProfesorMateria,
 } = require("../../models");
 const bcrypt = require("bcrypt");
+const { Op } = require("sequelize");
 
 exports.perfil = async (req, res, next) => {
   try {
@@ -100,10 +101,21 @@ exports.perfil = async (req, res, next) => {
 
     const totalMaterias = usuario.inscripciones.length;
     const aprobadas = usuario.inscripciones.filter(
-      (i) => i.estado === "APROBADA"
+      (i) => i.estado === "Aprobada"
     ).length;
-
-    const todasNotas = usuario.inscripciones.flatMap((i) => i.evaluaciones);
+    
+    // Contar materias únicas aprobadas por el alumno
+    const materiasAprobadasIds = new Set();
+    usuario.inscripciones
+      .filter((i) => i.estado === "Aprobada")
+      .forEach((i) => {
+        if (i.ciclo && i.ciclo.materiaPlan && i.ciclo.materiaPlan.id_materia) {
+          materiasAprobadasIds.add(i.ciclo.materiaPlan.id_materia);
+        }
+      });
+    
+    const materiasAprobadasUnicas = materiasAprobadasIds.size;
+    
     const promedio =
       todasNotas.length > 0
         ? todasNotas.reduce((sum, ev) => sum + parseFloat(ev.nota || 0), 0) /
@@ -246,105 +258,124 @@ exports.getCarrerasInscripto = async (req, res) => {
           attributes: ["id", "nombre"],
         },
       ],
-    });
+      required: false, // LEFT JOIN para no excluir usuarios sin carreras
+    };
 
-    const carreras = inscripciones.map((inscripcion) => inscripcion.carrera);
-
-    if (!carreras.length) {
-      return res
-        .status(404)
-        .json({ message: "El alumno no está inscripto en ninguna carrera." });
+    // Aplicar filtros específicos si se proporcionan
+    if (activo !== undefined || carrera) {
+      const carreraWhere = {};
+      
+      if (activo !== undefined) {
+        carreraWhere.activo = activo === 'true' ? 1 : 0;
+      }
+      
+      if (carrera) {
+        carreraWhere.id_carrera = carrera;
+      }
+      
+      carreraInclude.where = carreraWhere;
+      carreraInclude.required = true; // INNER JOIN cuando hay filtros específicos
     }
 
-    res.status(200).json(carreras);
-  } catch (error) {
-    console.error("Error al obtener las carreras del alumno: ", error);
-    res.status(500).json({ message: "Error interno del servidor." });
-  }
-};
-
-exports.getMateriasPorCarrera = async (req, res) => {
-  try {
-    const { idAlumno, idCarrera } = req.params;
-
-    const inscripcion = await AlumnoCarrera.findOne({
-      where: {
-        id_persona: idAlumno,
-        id_carrera: idCarrera,
-      },
-    });
-
-    if (!inscripcion) {
-      return res
-        .status(404)
-        .json({ message: "El alumno no esta inscripto en esta carrera." });
-    }
-
-    const planesEstudio = await PlanEstudio.findAll({
-      where: { id_carrera: idCarrera },
-      attributes: ["id"],
-    });
-
-    if (!planesEstudio || planesEstudio.length === 0) {
-      return res.status(404).json({
-        message: "No se encontró un plan de estudio para esta carrera.",
-      });
-    }
-
-    const planEstudioIds = planesEstudio.map((plan) => plan.id);
-
-    const materiasInscriptas = await InscripcionMateria.findAll({
-      where: { id_usuario_alumno: idAlumno },
+    const alumnos = await Usuario.findAll({
       include: [
         {
-          model: MateriaPlanCicloLectivo,
-          as: "ciclo",
-          attributes: ["id"],
+          model: Persona,
+          as: "persona",
+          attributes: ["nombre", "apellido", "dni", "email", "telefono"],
+          include: [carreraInclude],
+          required: true, // Asegurar que siempre tenga persona
+        },
+        {
+          model: RolUsuario,
+          as: "rol_usuarios",
           include: [
             {
-              model: Materia,
-              as: "materia",
+              model: Rol,
+              as: "rol",
               attributes: ["id", "nombre"],
-              include: [
-                {
-                  model: MateriaPlan,
-                  as: "materiaPlan",
-                  where: {
-                    id_plan_estudio: planEstudioIds,
-                  },
-                },
-              ],
+              where: { nombre: "Alumno" },
             },
-            {
-              model: ProfesorMateria,
-              as: "profesores",
-              include: [
-                {
-                  model: Persona,
-                  as: "persona",
-                  attributes: ["nombre", "apellido"],
-                },
-              ],
-            },
+          ],
+          required: true,
+        },
+      ],
+      where: whereConditions,
+    });
+
+    const alumnosFormateados = alumnos.map((alumno) => {
+      // Validar que persona existe
+      if (!alumno.persona) {
+        console.warn(`Usuario ${alumno.id} sin persona asociada`);
+        return null;
+      }
+
+      const carreras = alumno.persona.carreras || [];
+      const carreraActiva = carreras.find((c) => c.activo === 1) || carreras[0];
+
+      return {
+        id: alumno.id,
+        username: alumno.username,
+        nombre: alumno.persona.nombre,
+        apellido: alumno.persona.apellido,
+        dni: alumno.persona.dni,
+        email: alumno.persona.email,
+        telefono: alumno.persona.telefono,
+        carrera: {
+          id: carreraActiva?.carrera?.id || null,
+          nombre: carreraActiva?.carrera?.nombre || "Sin carrera"
+        },
+        fechaInscripcion: carreraActiva?.fecha_inscripcion || null,
+        activo: carreraActiva?.activo === 1,
+      };
+    }).filter(alumno => alumno !== null); // Filtrar elementos nulos
+
+    res.json(alumnosFormateados);
+  } catch (error) {
+    console.error("Error al listar alumnos:", error);
+    next(error);
+  }
+};
+// Controlador para buscar alumnos por DNI o nombre
+exports.buscarAlumnos = async (req, res, next) => {
+  try {
+    const term = req.query.term;
+    if (!term) {
+      return res.status(400).json({ message: "Término de búsqueda requerido" });
+    }
+    const alumnos = await Usuario.findAll({
+      where: {},
+      include: [
+        {
+          model: Persona,
+          as: "persona",
+          attributes: ["nombre", "apellido", "dni"],
+          where: {
+            [Op.or]: [
+              { dni: { [Op.like]: `%${term}%` } },
+              { nombre: { [Op.like]: `%${term}%` } },
+              { apellido: { [Op.like]: `%${term}%` } },
+            ],
+          },
+        },
+        {
+          model: RolUsuario,
+          as: "rol_usuarios",
+          include: [
+            { model: Rol, as: "rol", where: { nombre: "Alumno" } },
           ],
         },
       ],
+      limit: 10,
     });
-
-    const resumenMateriasAlumno = materiasInscriptas.map((item) => ({
-      id: item.ciclo.materia.id,
-      nombre: item.ciclo.materia.nombre,
-      estado: item.estado,
-      nota: item.nota_final,
-      profesor: item.ciclo.profesores?.length
-        ? item.ciclo.profesores
-            .map((p) => `${p.persona.nombre} ${p.persona.apellido}`)
-            .join(", ")
-        : "Sin profesor asignado",
+    const resultados = alumnos.map((a) => ({
+      id: a.id,
+      nombre: a.persona.nombre,
+      apellido: a.persona.apellido,
+      dni: a.persona.dni,
     }));
-    res.status(200).json(resumenMateriasAlumno);
+    res.json(resultados);
   } catch (error) {
-    console.error("Error al obtener las materias del alumno: ", error);
-    res.status(500).json({ message: "Error interno del servidor." });
+    next(error);
   }
 };

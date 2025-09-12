@@ -23,13 +23,78 @@ const {
   Materia,
   ExamenFinal,
   AsistenciaExamenFinal,
-  InscripcionExamenFinal
+  InscripcionExamenFinal,
 } = require("../models");
 dayjs.locale("es");
 const router = express.Router();
 const { Op } = require("sequelize");
 
-// Distribuidor principal de certificados
+// Ruta para certificados manuales (sin idAlumno)
+router.get(
+  "/certificado/:certificadoId",
+  verifyToken,
+  async (req, res, next) => {
+    try {
+      const { certificadoId } = req.params;
+      const { nombre, apellido, dni, carrera, resolucion } = req.query;
+      const certificadoIdInt = parseInt(certificadoId);
+
+      // Validar que se proporcionaron los datos manuales mínimos
+      if (!nombre || !apellido || !dni) {
+        return res.status(400).json({
+          error: "Se requieren nombre, apellido y DNI para certificado manual",
+        });
+      }
+
+      // Crear objeto alumno manual
+      const alumno = {
+        persona: {
+          nombre: nombre.trim(),
+          apellido: apellido.trim(),
+          dni: dni.trim(),
+        },
+        carrera: carrera?.trim() || "Sin especificar",
+        resolucion: resolucion?.trim() || "—",
+      };
+
+      // Distribuir según el tipo de certificado
+      switch (certificadoIdInt) {
+        case 1:
+          return await procesarCertificadoAlumnoRegular(
+            req,
+            res,
+            next,
+            alumno,
+            true
+          );
+        case 2:
+          return await procesarCertificadoMateriasAprobadas(
+            req,
+            res,
+            next,
+            alumno,
+            true
+          );
+        case 3:
+          return await procesarCertificadoAsistenciaExamen(
+            req,
+            res,
+            next,
+            alumno,
+            true
+          );
+        default:
+          return res
+            .status(400)
+            .json({ error: "Tipo de certificado no válido" });
+      }
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+// Ruta para certificados de alumnos registrados (con idAlumno)
 router.get(
   "/certificado/:certificadoId/:idAlumno",
   verifyToken,
@@ -56,13 +121,33 @@ router.get(
       // Distribuir según el tipo de certificado
       switch (certificadoIdInt) {
         case 1:
-          return await procesarCertificadoAlumnoRegular(req, res, next, alumno);
+          return await procesarCertificadoAlumnoRegular(
+            req,
+            res,
+            next,
+            alumno,
+            false
+          );
         case 2:
-          return await procesarCertificadoMateriasAprobadas(req, res, next, alumno);
+          return await procesarCertificadoMateriasAprobadas(
+            req,
+            res,
+            next,
+            alumno,
+            false
+          );
         case 3:
-          return await procesarCertificadoAsistenciaExamen(req, res, next, alumno);
+          return await procesarCertificadoAsistenciaExamen(
+            req,
+            res,
+            next,
+            alumno,
+            false
+          );
         default:
-          return res.status(400).json({ error: "Tipo de certificado no válido" });
+          return res
+            .status(400)
+            .json({ error: "Tipo de certificado no válido" });
       }
     } catch (e) {
       next(e);
@@ -70,47 +155,67 @@ router.get(
   }
 );
 
-// Función para generar Certificado de Alumno Regular (ID: 1)
-async function procesarCertificadoAlumnoRegular(req, res, next, alumno) {
+// Función para generar Certificado de Alumno Regular (modificada)
+async function procesarCertificadoAlumnoRegular(
+  req,
+  res,
+  next,
+  alumno,
+  isManual = false
+) {
   try {
-    const carrerasActivas = await AlumnoCarrera.findAll({
-      where: {
-        id_persona: alumno.id_persona,
-        activo: { [Op.or]: [true, 1] },
-      },
-      include: [
-        {
-          model: Carrera,
-          as: "carrera",
-          attributes: ["nombre"],
-          required: true,
-          include: [
-            {
-              model: PlanEstudio,
-              as: "planesEstudio",
-              attributes: ["resolucion"],
-              required: false,
-            },
-          ],
-        },
-      ],
-    });
-
-    if (carrerasActivas.length === 0) {
-      return res
-        .status(400)
-        .json({ error: "El alumno no está activo en ninguna carrera" });
-    }
-
-    const contacto = "terciario@lujanbuenviaje.edu.ar — www.lujanbuenviaje.edu.ar";
+    const contacto =
+      "terciario@lujanbuenviaje.edu.ar — www.lujanbuenviaje.edu.ar";
     const sitio = "www.lujanbuenviaje.edu.ar";
     const email = "terciario@lujanbuenviaje.edu.ar";
     const hoy = dayjs();
 
-    const carrerasInfo = carrerasActivas.map((c) => ({
-      nombre: c.carrera?.nombre,
-      resolucion: c.carrera?.planesEstudio?.[0]?.resolucion ?? "—",
-    }));
+    let carrerasInfo = [];
+
+    if (!isManual) {
+      // Para alumnos registrados, buscar carreras activas
+      const carrerasActivas = await AlumnoCarrera.findAll({
+        where: {
+          id_persona: alumno.id_persona,
+          activo: { [Op.or]: [true, 1] },
+        },
+        include: [
+          {
+            model: Carrera,
+            as: "carrera",
+            attributes: ["nombre"],
+            required: true,
+            include: [
+              {
+                model: PlanEstudio,
+                as: "planesEstudio",
+                attributes: ["resolucion"],
+                required: false,
+              },
+            ],
+          },
+        ],
+      });
+
+      if (carrerasActivas.length === 0) {
+        return res
+          .status(400)
+          .json({ error: "El alumno no está activo en ninguna carrera" });
+      }
+
+      carrerasInfo = carrerasActivas.map((c) => ({
+        nombre: c.carrera?.nombre,
+        resolucion: c.carrera?.planesEstudio?.[0]?.resolucion ?? "—",
+      }));
+    } else {
+      // Para alumnos manuales, usar datos proporcionados o genéricos
+      carrerasInfo = [
+        {
+          nombre: alumno.carrera || "Sin especificar",
+          resolucion: alumno.resolucion || "—",
+        },
+      ];
+    }
 
     const data = {
       nombre: alumno.persona.nombre,
@@ -123,13 +228,8 @@ async function procesarCertificadoAlumnoRegular(req, res, next, alumno) {
       dia: hoy.format("D"),
       mes: hoy.format("MMMM"),
       anio: hoy.format("YYYY"),
+      isManual,
     };
-
-    await Certificado.create({
-      id_usuario_alumno: alumno.id,
-      tipo: "ALUMNO_REGULAR",
-      fecha_emision: new Date(),
-    });
 
     if (req.query.format === "html") {
       const html = renderConstanciaHTML(data);
@@ -154,59 +254,80 @@ async function procesarCertificadoAlumnoRegular(req, res, next, alumno) {
   }
 }
 
-// Función para generar Certificado de Materias Aprobadas (ID: 2)
-async function procesarCertificadoMateriasAprobadas(req, res, next, alumno) {
+// Función para generar Certificado de Materias Aprobadas (modificada)
+async function procesarCertificadoMateriasAprobadas(
+  req,
+  res,
+  next,
+  alumno,
+  isManual = false
+) {
   try {
-    const materiasAprobadas = await InscripcionMateria.findAll({
-      where: {
-        id_usuario_alumno: alumno.id,
-        estado: "APROBADA"
-      },
-      include: [
-        {
-          model: MateriaPlanCicloLectivo,
-          as: "ciclo",
-          include: [
-            {
-              model: MateriaPlan,
-              as: "materiaPlan",
-              include: [
-                {
-                  model: Materia,
-                  as: "materia",
-                  attributes: ["nombre"]
-                },
-                {
-                  model: PlanEstudio,
-                  as: "planEstudio",
-                  attributes: ["resolucion"],
-                  include: [
-                    {
-                      model: Carrera,
-                      as: "carrera",
-                      attributes: ["nombre"]
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ],
-      order: [['fecha_inscripcion', 'ASC']]
-    });
-
-    const contacto = "terciario@lujanbuenviaje.edu.ar — www.lujanbuenviaje.edu.ar";
+    const contacto =
+      "terciario@lujanbuenviaje.edu.ar — www.lujanbuenviaje.edu.ar";
     const sitio = "www.lujanbuenviaje.edu.ar";
     const email = "terciario@lujanbuenviaje.edu.ar";
     const hoy = dayjs();
 
-    const materiasInfo = materiasAprobadas.map((inscripcion) => ({
-      nombre: inscripcion.ciclo?.materiaPlan?.materia?.nombre || "Materia no especificada",
-      carrera: inscripcion.ciclo?.materiaPlan?.planEstudio?.carrera?.nombre || "Carrera no especificada",
-      fechaAprobacion: inscripcion.fecha_aprobacion ? dayjs(inscripcion.fecha_aprobacion).format("DD/MM/YYYY") : "—",
-      cicloLectivo: inscripcion.ciclo?.ciclo_lectivo || "—"
-    }));
+    let materiasInfo = [];
+
+    if (!isManual) {
+      // Para alumnos registrados, buscar materias aprobadas
+      const materiasAprobadas = await InscripcionMateria.findAll({
+        where: {
+          id_usuario_alumno: alumno.id,
+          estado: "APROBADA",
+        },
+        include: [
+          {
+            model: MateriaPlanCicloLectivo,
+            as: "ciclo",
+            include: [
+              {
+                model: MateriaPlan,
+                as: "materiaPlan",
+                include: [
+                  {
+                    model: Materia,
+                    as: "materia",
+                    attributes: ["nombre"],
+                  },
+                  {
+                    model: PlanEstudio,
+                    as: "planEstudio",
+                    attributes: ["resolucion"],
+                    include: [
+                      {
+                        model: Carrera,
+                        as: "carrera",
+                        attributes: ["nombre"],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        order: [["fecha_inscripcion", "ASC"]],
+      });
+
+      materiasInfo = materiasAprobadas.map((inscripcion) => ({
+        nombre:
+          inscripcion.ciclo?.materiaPlan?.materia?.nombre ||
+          "Materia no especificada",
+        carrera:
+          inscripcion.ciclo?.materiaPlan?.planEstudio?.carrera?.nombre ||
+          "Carrera no especificada",
+        fechaAprobacion: inscripcion.fecha_aprobacion
+          ? dayjs(inscripcion.fecha_aprobacion).format("DD/MM/YYYY")
+          : "—",
+        cicloLectivo: inscripcion.ciclo?.ciclo_lectivo || "—",
+      }));
+    } else {
+      // Para alumnos manuales, lista vacía
+      materiasInfo = [];
+    }
 
     const data = {
       nombre: alumno.persona.nombre,
@@ -220,13 +341,8 @@ async function procesarCertificadoMateriasAprobadas(req, res, next, alumno) {
       dia: hoy.format("D"),
       mes: hoy.format("MMMM"),
       anio: hoy.format("YYYY"),
+      isManual,
     };
-
-    await Certificado.create({
-      id_usuario_alumno: alumno.id,
-      tipo: "MATERIAS_APROBADAS",
-      fecha_emision: new Date(),
-    });
 
     if (req.query.format === "html") {
       const html = renderCertificadoMateriasAprobadasHTML(data);
@@ -251,65 +367,86 @@ async function procesarCertificadoMateriasAprobadas(req, res, next, alumno) {
   }
 }
 
-// Función para generar Certificado de Asistencia a Examen (ID: 3)
-async function procesarCertificadoAsistenciaExamen(req, res, next, alumno) {
+// Función para generar Certificado de Asistencia a Examen (modificada)
+async function procesarCertificadoAsistenciaExamen(
+  req,
+  res,
+  next,
+  alumno,
+  isManual = false
+) {
   try {
-    const asistenciasExamen = await AsistenciaExamenFinal.findAll({
-      where: {
-        id_usuario_alumno: alumno.id
-      },
-      include: [
-        {
-          model: ExamenFinal,
-          as: "examenFinal",
-          include: [
-            {
-              model: MateriaPlanCicloLectivo,
-              as: "ciclo",
-              include: [
-                {
-                  model: MateriaPlan,
-                  as: "materiaPlan",
-                  include: [
-                    {
-                      model: Materia,
-                      as: "materia",
-                      attributes: ["nombre"]
-                    },
-                    {
-                      model: PlanEstudio,
-                      as: "planEstudio",
-                      attributes: ["resolucion"],
-                      include: [
-                        {
-                          model: Carrera,
-                          as: "carrera",
-                          attributes: ["nombre"]
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ],
-      order: [['fecha_asistencia', 'DESC']]
-    });
-
-    const contacto = "terciario@lujanbuenviaje.edu.ar — www.lujanbuenviaje.edu.ar";
+    const contacto =
+      "terciario@lujanbuenviaje.edu.ar — www.lujanbuenviaje.edu.ar";
     const sitio = "www.lujanbuenviaje.edu.ar";
     const email = "terciario@lujanbuenviaje.edu.ar";
     const hoy = dayjs();
 
-    const examenesInfo = asistenciasExamen.map((asistencia) => ({
-      materia: asistencia.examenFinal?.materiaPlanCiclo?.materiaPlan?.materia?.nombre || "Materia no especificada",
-      carrera: asistencia.examenFinal?.materiaPlanCiclo?.materiaPlan?.planEstudio?.carrera?.nombre || "Carrera no especificada",
-      fechaExamen: asistencia.fecha_asistencia ? dayjs(asistencia.fecha_asistencia).format("DD/MM/YYYY") : "—",
-      llamado: asistencia.examenFinal?.llamado || "—",
-      presente: asistencia.presente ? "Sí" : "No"
-    }));
+    let examenesInfo = [];
+
+    if (!isManual) {
+      // Para alumnos registrados, buscar asistencias a exámenes
+      const asistenciasExamen = await AsistenciaExamenFinal.findAll({
+        where: {
+          id_usuario_alumno: alumno.id,
+        },
+        include: [
+          {
+            model: ExamenFinal,
+            as: "examenFinal",
+            include: [
+              {
+                model: MateriaPlanCicloLectivo,
+                as: "ciclo",
+                include: [
+                  {
+                    model: MateriaPlan,
+                    as: "materiaPlan",
+                    include: [
+                      {
+                        model: Materia,
+                        as: "materia",
+                        attributes: ["nombre"],
+                      },
+                      {
+                        model: PlanEstudio,
+                        as: "planEstudio",
+                        attributes: ["resolucion"],
+                        include: [
+                          {
+                            model: Carrera,
+                            as: "carrera",
+                            attributes: ["nombre"],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        order: [["fecha_asistencia", "DESC"]],
+      });
+
+      examenesInfo = asistenciasExamen.map((asistencia) => ({
+        materia:
+          asistencia.examenFinal?.materiaPlanCiclo?.materiaPlan?.materia
+            ?.nombre || "Materia no especificada",
+        carrera:
+          asistencia.examenFinal?.materiaPlanCiclo?.materiaPlan?.planEstudio
+            ?.carrera?.nombre || "Carrera no especificada",
+        fechaExamen: asistencia.fecha_asistencia
+          ? dayjs(asistencia.fecha_asistencia).format("DD/MM/YYYY")
+          : "—",
+        llamado: asistencia.examenFinal?.llamado || "—",
+        presente: asistencia.presente ? "Sí" : "No",
+      }));
+    } else {
+      // Para alumnos manuales, lista vacía
+      examenesInfo = [];
+    }
 
     const data = {
       nombre: alumno.persona.nombre,
@@ -323,13 +460,8 @@ async function procesarCertificadoAsistenciaExamen(req, res, next, alumno) {
       dia: hoy.format("D"),
       mes: hoy.format("MMMM"),
       anio: hoy.format("YYYY"),
+      isManual,
     };
-
-    await Certificado.create({
-      id_usuario_alumno: alumno.id,
-      tipo: "ASISTENCIA_EXAMEN",
-      fecha_emision: new Date(),
-    });
 
     if (req.query.format === "html") {
       const html = renderCertificadoAsistenciaExamenHTML(data);
@@ -375,7 +507,13 @@ router.get(
       if (!alumno)
         return res.status(404).json({ error: "Alumno no encontrado" });
 
-      return await procesarCertificadoAlumnoRegular(req, res, next, alumno);
+      return await procesarCertificadoAlumnoRegular(
+        req,
+        res,
+        next,
+        alumno,
+        false
+      );
     } catch (e) {
       next(e);
     }
