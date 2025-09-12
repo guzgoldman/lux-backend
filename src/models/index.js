@@ -178,6 +178,18 @@ ExamenFinal.belongsTo(Usuario, {
   onUpdate: "CASCADE",
 });
 
+ExamenFinal.belongsTo(Usuario, {
+  as: "usuarioCreador",
+  foreignKey: "creado_por",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+ExamenFinal.hasMany(InscripcionExamenFinal, {
+  as: "inscripciones",
+  foreignKey: "id_examen_final",
+});
+
 HistorialExamenFinal.belongsTo(ExamenFinal, {
   as: "examenFinal",
   foreignKey: "id_examen",
