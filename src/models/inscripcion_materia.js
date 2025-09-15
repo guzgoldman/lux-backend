@@ -17,7 +17,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
         onUpdate:    sequelize.literal('CURRENT_TIMESTAMP')
-      }
+      },
+      origen_aprobacion: { type: DataTypes.ENUM('Final', 'Equivalencia', 'Convalidacion', 'Promocion'), defaultValue: 'Final' },
+      id_inscripcion_examen_final_aprobatorio: { type: DataTypes.INTEGER, allowNull: true },
+      id_acreditacion_equivalencia_aprobatoria: { type: DataTypes.INTEGER, allowNull: true },
     },
     {
       tableName: 'inscripcion_materia',

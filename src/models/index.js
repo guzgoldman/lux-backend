@@ -37,6 +37,7 @@ const asistenciaExamenFinalModel = require("./asistencia_examen_final");
 const historialAsistenciaExamenFinalModel = require("./historial_asistencia_examen_final");
 const horarioMateriaModel = require("./horario_materia");
 const calificacionCuatrimestreModel = require("./calificacion_cuatrimestre");
+const acreditacionEquivalenciaModel = require("./acreditacion_equivalencia");
 
 const Persona = personaModel(sequelize, DataTypes);
 const Direccion = direccionModel(sequelize, DataTypes);
@@ -90,6 +91,9 @@ const HistorialAsistenciaExamenFinal = historialAsistenciaExamenFinalModel(
 );
 const HorarioMateria = horarioMateriaModel(sequelize, DataTypes);
 const CalificacionCuatrimestre = calificacionCuatrimestreModel(sequelize, DataTypes);
+const AcreditacionEquivalencia = acreditacionEquivalenciaModel(sequelize, DataTypes);
+
+// Definición de relaciones
 
 Persona.hasMany(Direccion, { foreignKey: "id_persona", as: "direcciones" });
 
@@ -625,5 +629,6 @@ module.exports = {
   HorarioMateria,
   Preinscripcion,
   PreinscripcionEstado,
-  CalificacionCuatrimestre
+  CalificacionCuatrimestre,
+  AcreditacionEquivalencia
 };
