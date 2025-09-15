@@ -12,7 +12,7 @@ const {
   Rol,
   PlanEstudio,
   MateriaPlan,
-  ProfesorMateria,
+  RolUsuario
 } = require("../../models");
 const bcrypt = require("bcrypt");
 const { Op } = require("sequelize");
@@ -50,6 +50,28 @@ exports.perfil = async (req, res, next) => {
                   model: Carrera,
                   as: "carrera",
                   attributes: ["id", "nombre"],
+                  include: [
+                    {
+                      model: PlanEstudio,
+                      as: "planesEstudio",
+                      attributes: ["id", "resolucion", "vigente"],
+                      where: { vigente: 1 },
+                      include: [
+                        {
+                          model: MateriaPlan,
+                          as: "materiaPlans",
+                          attributes: ["id"],
+                          include: [
+                            {
+                              model: Materia,
+                              as: "materia",
+                              attributes: ["id", "nombre"],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
                 },
               ],
             },
@@ -66,9 +88,16 @@ exports.perfil = async (req, res, next) => {
               attributes: ["id", "ciclo_lectivo"],
               include: [
                 {
-                  model: Materia,
-                  as: "materia",
-                  attributes: ["nombre"],
+                  model: MateriaPlan,
+                  as: "materiaPlan",
+                  attributes: ["id", "id_materia"],
+                  include: [
+                    {
+                      model: Materia,
+                      as: "materia",
+                      attributes: ["id", "nombre"],
+                    },
+                  ],
                 },
                 {
                   model: HorarioMateria,
@@ -99,11 +128,10 @@ exports.perfil = async (req, res, next) => {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
 
-    const totalMaterias = usuario.inscripciones.length;
     const aprobadas = usuario.inscripciones.filter(
       (i) => i.estado === "Aprobada"
     ).length;
-    
+
     // Contar materias únicas aprobadas por el alumno
     const materiasAprobadasIds = new Set();
     usuario.inscripciones
@@ -113,14 +141,14 @@ exports.perfil = async (req, res, next) => {
           materiasAprobadasIds.add(i.ciclo.materiaPlan.id_materia);
         }
       });
-    
+
     const materiasAprobadasUnicas = materiasAprobadasIds.size;
-    
+
     const promedio =
-      todasNotas.length > 0
-        ? todasNotas.reduce((sum, ev) => sum + parseFloat(ev.nota || 0), 0) /
-          todasNotas.length
-        : 0;
+      usuario.inscripciones
+        .flatMap((i) => i.evaluaciones)
+        .reduce((sum, ev) => sum + parseFloat(ev.nota), 0) /
+        usuario.inscripciones.flatMap((i) => i.evaluaciones).length || 0;
 
     const tipoAlumnoMap = {
       1: "Regular",
@@ -129,36 +157,53 @@ exports.perfil = async (req, res, next) => {
       4: "Itinerante",
     };
 
-    const carreras = usuario.persona.carreras || [];
+    const carreras = usuario.persona.carreras;
     let carreraActiva =
       carreras.find((c) => c.activo === 1) || carreras[0] || {};
-    const idTipo = carreraActiva?.id_tipo_alumno;
+    const idTipo = carreraActiva.id_tipo_alumno;
+
+    // Obtener total de materias del plan de estudios vigente
+    let totalMateriasPlan = 0;
+    if (
+      carreraActiva.carrera &&
+      carreraActiva.carrera.planesEstudio &&
+      carreraActiva.carrera.planesEstudio.length > 0
+    ) {
+      const planVigente = carreraActiva.carrera.planesEstudio[0]; // Ya filtrado por vigente: 1
+      totalMateriasPlan = planVigente.materiaPlans
+        ? planVigente.materiaPlans.length
+        : 0;
+    }
 
     const informacionPersonal = {
       nombre: `${usuario.persona.nombre} ${usuario.persona.apellido}`,
       fechaNacimiento: usuario.persona.fecha_nacimiento,
       dni: usuario.persona.dni,
-      ingreso: carreraActiva?.fecha_inscripcion || null,
+      ingreso: carreraActiva.fecha_inscripcion
+        ? carreraActiva.fecha_inscripcion
+        : null,
       condicion: tipoAlumnoMap[idTipo] || "Desconocido",
-      carrera: carreras.map((c) => c.carrera?.nombre).join(", "),
+      carrera: carreras.map((c) => c.carrera.nombre).join(", "),
     };
 
     res.json({
       informacionPersonal,
       estadisticas: [
         { iconoKey: "promedio", valor: promedio.toFixed(1) },
-        { iconoKey: "materias", valor: totalMaterias },
-        { iconoKey: "aprobadas", valor: `${aprobadas}/${totalMaterias}` },
+        {
+          iconoKey: "aprobadas",
+          valor: `${materiasAprobadasUnicas}/${totalMateriasPlan}`,
+        },
       ],
       horarios: usuario.inscripciones.flatMap((i) =>
         i.ciclo.horarios.map((h) => ({
-          nombre: i.ciclo.materia.nombre,
+          nombre: i.ciclo.materiaPlan.materia.nombre,
           profesor: "—",
           horario: `Día ${h.dia_semana} Bloque ${h.bloque}`,
         }))
       ),
       materias: usuario.inscripciones.map((i) => ({
-        nombre: i.ciclo.materia.nombre,
+        nombre: i.ciclo.materiaPlan.materia.nombre,
         profesor: "—",
         estado: i.estado,
         horario: i.ciclo.horarios
@@ -259,20 +304,20 @@ exports.getCarrerasInscripto = async (req, res) => {
         },
       ],
       required: false, // LEFT JOIN para no excluir usuarios sin carreras
-    };
+    });
 
     // Aplicar filtros específicos si se proporcionan
     if (activo !== undefined || carrera) {
       const carreraWhere = {};
-      
+
       if (activo !== undefined) {
-        carreraWhere.activo = activo === 'true' ? 1 : 0;
+        carreraWhere.activo = activo === "true" ? 1 : 0;
       }
-      
+
       if (carrera) {
         carreraWhere.id_carrera = carrera;
       }
-      
+
       carreraInclude.where = carreraWhere;
       carreraInclude.required = true; // INNER JOIN cuando hay filtros específicos
     }
@@ -303,32 +348,35 @@ exports.getCarrerasInscripto = async (req, res) => {
       where: whereConditions,
     });
 
-    const alumnosFormateados = alumnos.map((alumno) => {
-      // Validar que persona existe
-      if (!alumno.persona) {
-        console.warn(`Usuario ${alumno.id} sin persona asociada`);
-        return null;
-      }
+    const alumnosFormateados = alumnos
+      .map((alumno) => {
+        // Validar que persona existe
+        if (!alumno.persona) {
+          console.warn(`Usuario ${alumno.id} sin persona asociada`);
+          return null;
+        }
 
-      const carreras = alumno.persona.carreras || [];
-      const carreraActiva = carreras.find((c) => c.activo === 1) || carreras[0];
+        const carreras = alumno.persona.carreras || [];
+        const carreraActiva =
+          carreras.find((c) => c.activo === 1) || carreras[0];
 
-      return {
-        id: alumno.id,
-        username: alumno.username,
-        nombre: alumno.persona.nombre,
-        apellido: alumno.persona.apellido,
-        dni: alumno.persona.dni,
-        email: alumno.persona.email,
-        telefono: alumno.persona.telefono,
-        carrera: {
-          id: carreraActiva?.carrera?.id || null,
-          nombre: carreraActiva?.carrera?.nombre || "Sin carrera"
-        },
-        fechaInscripcion: carreraActiva?.fecha_inscripcion || null,
-        activo: carreraActiva?.activo === 1,
-      };
-    }).filter(alumno => alumno !== null); // Filtrar elementos nulos
+        return {
+          id: alumno.id,
+          username: alumno.username,
+          nombre: alumno.persona.nombre,
+          apellido: alumno.persona.apellido,
+          dni: alumno.persona.dni,
+          email: alumno.persona.email,
+          telefono: alumno.persona.telefono,
+          carrera: {
+            id: carreraActiva?.carrera?.id || null,
+            nombre: carreraActiva?.carrera?.nombre || "Sin carrera",
+          },
+          fechaInscripcion: carreraActiva?.fecha_inscripcion || null,
+          activo: carreraActiva?.activo === 1,
+        };
+      })
+      .filter((alumno) => alumno !== null); // Filtrar elementos nulos
 
     res.json(alumnosFormateados);
   } catch (error) {
@@ -361,9 +409,7 @@ exports.buscarAlumnos = async (req, res, next) => {
         {
           model: RolUsuario,
           as: "rol_usuarios",
-          include: [
-            { model: Rol, as: "rol", where: { nombre: "Alumno" } },
-          ],
+          include: [{ model: Rol, as: "rol", where: { nombre: "Alumno" } }],
         },
       ],
       limit: 10,
@@ -376,6 +422,123 @@ exports.buscarAlumnos = async (req, res, next) => {
     }));
     res.json(resultados);
   } catch (error) {
+    next(error);
+  }
+};
+
+exports.listarCarreras = async (req, res, next) => {
+  try {
+    const carreras = await Carrera.findAll({
+      attributes: ["id", "nombre"],
+      order: [["nombre", "ASC"]],
+    });
+
+    res.json(carreras);
+  } catch (error) {
+    console.error("Error al listar carreras:", error);
+    next(error);
+  }
+};
+
+// Controlador para listar todos los alumnos
+exports.listarAlumnos = async (req, res, next) => {
+  try {
+    const { activo, carrera } = req.query;
+
+    // Construir condiciones de filtrado
+    const whereConditions = {
+      "$rol_usuarios.rol.nombre$": "Alumno",
+    };
+
+    const carreraInclude = {
+      model: AlumnoCarrera,
+      as: "carreras",
+      attributes: ["fecha_inscripcion", "activo"],
+      include: [
+        {
+          model: Carrera,
+          as: "carrera",
+          attributes: ["id", "nombre"],
+        },
+      ],
+      required: false, // LEFT JOIN para no excluir usuarios sin carreras
+    };
+
+    // Aplicar filtros específicos si se proporcionan
+    if (activo !== undefined || carrera) {
+      const carreraWhere = {};
+
+      if (activo !== undefined) {
+        carreraWhere.activo = activo === "true" ? 1 : 0;
+      }
+
+      if (carrera) {
+        carreraWhere.id_carrera = carrera;
+      }
+
+      carreraInclude.where = carreraWhere;
+      carreraInclude.required = true; // INNER JOIN cuando hay filtros específicos
+    }
+
+    const alumnos = await Usuario.findAll({
+      include: [
+        {
+          model: Persona,
+          as: "persona",
+          attributes: ["nombre", "apellido", "dni", "email", "telefono"],
+          include: [carreraInclude],
+          required: true, // Asegurar que siempre tenga persona
+        },
+        {
+          model: RolUsuario,
+          as: "rol_usuarios",
+          include: [
+            {
+              model: Rol,
+              as: "rol",
+              attributes: ["id", "nombre"],
+              where: { nombre: "Alumno" },
+            },
+          ],
+          required: true,
+        },
+      ],
+      where: whereConditions,
+    });
+
+    const alumnosFormateados = alumnos
+      .map((alumno) => {
+        // Validar que persona existe
+        if (!alumno.persona) {
+          console.warn(`Usuario ${alumno.id} sin persona asociada`);
+          return null;
+        }
+
+        const carreras = alumno.persona.carreras || [];
+        const carreraActiva =
+          carreras.find((c) => c.activo === 1) || carreras[0];
+
+        return {
+          id: alumno.id,
+          username: alumno.username,
+          nombre: alumno.persona.nombre,
+          apellido: alumno.persona.apellido,
+          dni: alumno.persona.dni,
+          email: alumno.persona.email,
+          telefono: alumno.persona.telefono,
+          carrera: {
+            id: carreraActiva?.carrera?.id || null,
+            nombre: carreraActiva?.carrera?.nombre || "Sin carrera",
+          },
+          fechaInscripcion: carreraActiva?.fecha_inscripcion || null,
+          activo: carreraActiva?.activo === 1,
+        };
+      })
+      .filter((alumno) => alumno !== null); // Filtrar elementos nulos
+
+    res.json(alumnosFormateados);
+  } catch (error) {
+    console.error("Error al listar alumnos:", error);
     next(error);
   }
 };

@@ -23,7 +23,6 @@ const calcularEdad = (fechaNacimiento) => {
 
 exports.getEstadisticas = async (req, res, next) => {
   try {
-    // Estadísticas de Género por Carrera (generales)
     const generoPorCarrera = await AlumnoCarrera.findAll({
       attributes: [
         "id_carrera",
@@ -48,9 +47,6 @@ exports.getEstadisticas = async (req, res, next) => {
       raw: true,
       subQuery: false,
     });
-
-    //Estadísticas de Género por Carrera y Curso
-    //se usa la fecha de inscripción para obtener el Curso
     const generoPorCarreraCurso = await AlumnoCarrera.findAll({
       attributes: [
         "id_carrera",
@@ -77,7 +73,6 @@ exports.getEstadisticas = async (req, res, next) => {
       subQuery: false,
     });
 
-    // Estadísticas por edad
     const alumnosConEdad = await Persona.findAll({
       attributes: ["fecha_nacimiento"],
       raw: true,
