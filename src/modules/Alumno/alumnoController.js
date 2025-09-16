@@ -8,6 +8,10 @@ const {
   HorarioMateria,
   Evaluacion,
   AlumnoCarrera,
+  Materia,
+  HorarioMateria,
+  Evaluacion,
+  AlumnoCarrera,
   Carrera,
   Rol,
   PlanEstudio,
@@ -148,6 +152,8 @@ exports.getMateriasPorCarrera = async (req, res) => {
     }));
     res.status(200).json(resumenMateriasAlumno);
   } catch (error) {
+    console.error("Error al obtener las materias del alumno: ", error);
+    res.status(500).json({ message: "Error interno del servidor." });
     console.error("Error al obtener las materias del alumno: ", error);
     res.status(500).json({ message: "Error interno del servidor." });
   }

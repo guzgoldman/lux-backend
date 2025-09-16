@@ -542,7 +542,6 @@ exports.listarAlumnos = async (req, res, next) => {
     next(error);
   }
 };
-// Controlador para buscar alumnos por DNI o nombre
 exports.buscarAlumnos = async (req, res, next) => {
   try {
     const term = req.query.term;
