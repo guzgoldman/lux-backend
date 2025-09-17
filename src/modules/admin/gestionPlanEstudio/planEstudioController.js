@@ -83,7 +83,8 @@ exports.obtenerPlanEstudioAlumno = async (req, res, next) => {
   const idUsuario = req.user.id;
 
   try {
-    const planAlumno = await Usuario.findByPk(idUsuario, {
+    // Obtener todas las carreras activas del alumno junto con el plan asignado y datos de la carrera
+    const usuarioConCarreras = await Usuario.findByPk(idUsuario, {
       attributes: ["id", "id_persona"],
       include: {
         model: Persona,
@@ -92,14 +93,36 @@ exports.obtenerPlanEstudioAlumno = async (req, res, next) => {
         include: {
           model: AlumnoCarrera,
           as: "carreras",
-          attributes: ["id_plan_estudio_asignado", "activo"],
-          where: { activo: 1 }
+          attributes: ["id", "id_plan_estudio_asignado", "id_carrera", "activo"],
+          where: { activo: 1 },
+          include: [
+            {
+              model: PlanEstudio,
+              as: 'planEstudio',
+              attributes: ['id', 'resolucion', 'anio_implementacion', 'vigente'],
+              required: false
+            },
+            {
+              model: Carrera,
+              as: 'carrera',
+              attributes: ['id', 'nombre'],
+              required: false
+            }
+          ]
         }
       }
     });
-    const planAsignado = planAlumno?.persona?.carreras?.[0]?.id_plan_estudio_asignado;
 
-    res.status(200).json({ planAsignado });
+    const carreras = (usuarioConCarreras?.persona?.carreras || []).map((ac) => ({
+      id: ac.id,
+      idCarrera: ac.id_carrera,
+      activo: ac.activo,
+      idPlanAsignado: ac.id_plan_estudio_asignado,
+      plan: ac.planEstudio || null,
+      carrera: ac.carrera || null
+    }));
+
+    res.status(200).json({ carreras });
   } catch (err) {
     console.error('Error completo:', err);
     next(err);

@@ -486,6 +486,21 @@ Carrera.hasMany(AlumnoCarrera, {
   onUpdate: "CASCADE",
 });
 
+// Asociar AlumnoCarrera con PlanEstudio (plan asignado al alumno)
+AlumnoCarrera.belongsTo(PlanEstudio, {
+  foreignKey: "id_plan_estudio_asignado",
+  as: "planEstudio",
+  onDelete: "SET NULL",
+  onUpdate: "CASCADE",
+});
+
+PlanEstudio.hasMany(AlumnoCarrera, {
+  foreignKey: "id_plan_estudio_asignado",
+  as: "alumnosAsignados",
+  onDelete: "SET NULL",
+  onUpdate: "CASCADE",
+});
+
 Usuario.hasMany(InscripcionMateria, {
   foreignKey: "id_usuario_alumno",
   as: "inscripciones",
