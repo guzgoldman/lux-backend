@@ -1,12 +1,12 @@
 const {
   Materia,
   MateriaPlan,
+  MateriaPlanCicloLectivo,
   Correlativa,
   InscripcionExamenFinal,
   AsistenciaExamenFinal,
   ExamenFinal,
   InscripcionMateria,
-  MateriaPlanCicloLectivo,
   HistorialAsistenciaExamenFinal,
   HistorialInscripcionExamenFinal,
   CalificacionCuatrimestre,
@@ -16,7 +16,10 @@ const {
   PlanEstudio,
   Carrera,
 } = require("../../../models");
-const { parsearFechaLocal, compararSoloFechas } = require("../../../utils/dateUtils");
+const {
+  parsearFechaLocal,
+  compararSoloFechas,
+} = require("../../../utils/dateUtils");
 
 const registrarExamenFinal = async (req, res) => {
   try {
@@ -37,10 +40,8 @@ const registrarExamenFinal = async (req, res) => {
       });
     }
 
-    const materiaPlanCicloLectivo = await MateriaPlanCicloLectivo.findByPk(
-      idMateria
-    );
-    if (!materiaPlanCicloLectivo) {
+    const materiaPlan = await MateriaPlan.findByPk(idMateria);
+    if (!materiaPlan) {
       return res.status(404).json({
         success: false,
         message: "La materia especificada no existe",
@@ -66,7 +67,7 @@ const registrarExamenFinal = async (req, res) => {
       }
 
       const hoy = new Date();
-      
+
       if (compararSoloFechas(fechaExamen, hoy) < 0) {
         return res.status(400).json({
           success: false,
@@ -76,29 +77,22 @@ const registrarExamenFinal = async (req, res) => {
     }
 
     const nuevoExamenFinal = await ExamenFinal.create({
-      id_materia_plan_ciclo_lectivo: idMateria,
+      id_materia_plan: idMateria,
       fecha: fechaExamen,
       id_usuario_profesor: idProfesor,
       creado_por,
       estado: "Pendiente",
     });
 
-    // Obtener el examen creado con información relacionada
     const examenCreado = await ExamenFinal.findByPk(nuevoExamenFinal.id, {
       include: [
         {
-          model: MateriaPlanCicloLectivo,
-          as: "ciclo",
+          model: MateriaPlan,
+          as: "materiaPlan",
           include: [
             {
-              model: MateriaPlan,
-              as: "materiaPlan",
-              include: [
-                {
-                  model: Materia,
-                  as: "materia",
-                },
-              ],
+              model: Materia,
+              as: "materia",
             },
           ],
         },
@@ -146,66 +140,59 @@ const listarExamenesFinales = async (req, res) => {
     const examenesFinales = await ExamenFinal.findAll({
       include: [
         {
-          model: MateriaPlanCicloLectivo,
-          as: 'ciclo',
+          model: MateriaPlan,
+          as: "materiaPlan",
           include: [
             {
-              model: MateriaPlan,
-              as: 'materiaPlan',
+              model: Materia,
+              as: "materia",
+            },
+            {
+              model: PlanEstudio,
+              as: "planEstudio",
               include: [
                 {
-                  model: Materia,
-                  as: 'materia'
+                  model: Carrera,
+                  as: "carrera",
                 },
-                {
-                  model: PlanEstudio,
-                  as: 'planEstudio',
-                  include: [
-                    {
-                      model: Carrera,
-                      as: 'carrera'
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
+              ],
+            },
+          ],
         },
         {
           model: Usuario,
-          as: 'Profesor',
+          as: "Profesor",
           include: [
             {
               model: Persona,
-              as: 'persona'
-            }
-          ]
+              as: "persona",
+            },
+          ],
         },
         {
           model: Usuario,
-          as: 'usuarioCreador',
+          as: "usuarioCreador",
           include: [
             {
               model: Persona,
-              as: 'persona'
-            }
-          ]
-        }
+              as: "persona",
+            },
+          ],
+        },
       ],
-      order: [['fecha_creacion', 'DESC']]
+      order: [["fecha_creacion", "DESC"]],
     });
 
     res.status(200).json({
       success: true,
-      data: examenesFinales
+      data: examenesFinales,
     });
-
   } catch (error) {
-    console.error('Error al listar exámenes finales:', error);
+    console.error("Error al listar exámenes finales:", error);
     res.status(500).json({
       success: false,
-      message: 'Error interno del servidor',
-      error: error.message
+      message: "Error interno del servidor",
+      error: error.message,
     });
   }
 };
@@ -218,93 +205,90 @@ const detalleExamenFinal = async (req, res) => {
     const examen = await ExamenFinal.findByPk(id, {
       include: [
         {
-          model: MateriaPlanCicloLectivo,
-          as: 'ciclo',
+          model: MateriaPlan,
+          as: "materiaPlan",
           include: [
             {
-              model: MateriaPlan,
-              as: 'materiaPlan',
+              model: Materia,
+              as: "materia",
+            },
+            {
+              model: PlanEstudio,
+              as: "planEstudio",
               include: [
                 {
-                  model: Materia,
-                  as: 'materia'
+                  model: Carrera,
+                  as: "carrera",
                 },
-                {
-                  model: PlanEstudio,
-                  as: 'planEstudio',
-                  include: [
-                    {
-                      model: Carrera,
-                      as: 'carrera'
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
+              ],
+            },
+          ],
         },
         {
           model: Usuario,
-          as: 'Profesor',
+          as: "Profesor",
           include: [
             {
               model: Persona,
-              as: 'persona'
-            }
-          ]
+              as: "persona",
+            },
+          ],
         },
         {
           model: Usuario,
-          as: 'usuarioCreador',
+          as: "usuarioCreador",
           include: [
             {
               model: Persona,
-              as: 'persona'
-            }
-          ]
+              as: "persona",
+            },
+          ],
         },
         {
           model: InscripcionExamenFinal,
-          as: 'inscripciones',
+          as: "inscripciones",
           include: [
             {
               model: Usuario,
-              as: 'alumno',
+              as: "alumno",
               include: [
                 {
                   model: Persona,
-                  as: 'persona'
-                }
-              ]
-            }
-          ]
-        }
-      ]
+                  as: "persona",
+                },
+              ],
+            },
+          ],
+        },
+      ],
     });
 
     if (!examen) {
       return res.status(404).json({
         success: false,
-        message: 'Examen final no encontrado'
+        message: "Examen final no encontrado",
       });
     }
 
     // Formatear la respuesta similar a como lo hace el detalle de materia
     const detalleFormateado = {
       id: examen.id,
-      materia: examen.ciclo?.materiaPlan?.materia?.nombre || 'Sin nombre',
-      id_materia: examen.ciclo?.materiaPlan?.materia?.id || null,
+      materia: examen.materiaPlan?.materia?.nombre || "Sin nombre",
+      id_materia: examen.materiaPlan?.materia?.id || null,
       estado: examen.estado,
       fecha: examen.fecha,
-      carrera: examen.ciclo?.materiaPlan?.planEstudio?.carrera?.nombre || 'Sin carrera',
-      resolucion: examen.ciclo?.materiaPlan?.planEstudio?.resolucion || 'Sin resolución',
+      carrera:
+        examen.materiaPlan?.planEstudio?.carrera?.nombre ||
+        "Sin carrera",
+      resolucion:
+        examen.materiaPlan?.planEstudio?.resolucion || "Sin resolución",
       profesor: {
         id: examen.Profesor?.id,
         nombre: examen.Profesor?.persona?.nombre,
         apellido: examen.Profesor?.persona?.apellido,
-        email: examen.Profesor?.persona?.email
+        email: examen.Profesor?.persona?.email,
       },
-      alumnos: (examen.inscripciones || []).map(inscripcion => ({
+      alumnos: (examen.inscripciones || []).map((inscripcion) => ({
         id_inscripcion: inscripcion.id,
         id_usuario: inscripcion.alumno?.id,
         nombre: inscripcion.alumno?.persona?.nombre,
@@ -312,26 +296,25 @@ const detalleExamenFinal = async (req, res) => {
         email: inscripcion.alumno?.persona?.email,
         fecha_inscripcion: inscripcion.fecha_inscripcion,
         calificacion: inscripcion.nota,
-        estado: inscripcion.estado
+        estado: inscripcion.estado,
       })),
       fecha_creacion: examen.fecha_creacion,
       creado_por: {
         nombre: examen.usuarioCreador?.persona?.nombre,
-        apellido: examen.usuarioCreador?.persona?.apellido
-      }
+        apellido: examen.usuarioCreador?.persona?.apellido,
+      },
     };
 
     res.status(200).json({
       success: true,
-      data: detalleFormateado
+      data: detalleFormateado,
     });
-
   } catch (error) {
-    console.error('Error al obtener detalle del examen final:', error);
+    console.error("Error al obtener detalle del examen final:", error);
     res.status(500).json({
       success: false,
-      message: 'Error interno del servidor',
-      error: error.message
+      message: "Error interno del servidor",
+      error: error.message,
     });
   }
 };
@@ -346,18 +329,18 @@ const obtenerAlumnosInscriptos = async (req, res) => {
       include: [
         {
           model: Usuario,
-          as: 'alumno',
+          as: "alumno",
           include: [
             {
               model: Persona,
-              as: 'persona'
-            }
-          ]
-        }
-      ]
+              as: "persona",
+            },
+          ],
+        },
+      ],
     });
 
-    const alumnosFormateados = inscripciones.map(inscripcion => ({
+    const alumnosFormateados = inscripciones.map((inscripcion) => ({
       id_inscripcion: inscripcion.id,
       id_usuario: inscripcion.alumno?.id,
       nombre: inscripcion.alumno?.persona?.nombre,
@@ -365,20 +348,19 @@ const obtenerAlumnosInscriptos = async (req, res) => {
       email: inscripcion.alumno?.persona?.email,
       fecha_inscripcion: inscripcion.fecha_inscripcion,
       calificacion: inscripcion.nota,
-      estado: inscripcion.estado
+      estado: inscripcion.estado,
     }));
 
     res.status(200).json({
       success: true,
-      data: alumnosFormateados
+      data: alumnosFormateados,
     });
-
   } catch (error) {
-    console.error('Error al obtener alumnos inscriptos:', error);
+    console.error("Error al obtener alumnos inscriptos:", error);
     res.status(500).json({
       success: false,
-      message: 'Error interno del servidor',
-      error: error.message
+      message: "Error interno del servidor",
+      error: error.message,
     });
   }
 };
@@ -394,14 +376,14 @@ const registrarAsistencia = async (req, res) => {
     const inscripcion = await InscripcionExamenFinal.findOne({
       where: {
         id_examen_final: idExamen,
-        id_usuario_alumno
-      }
+        id_usuario_alumno,
+      },
     });
 
     if (!inscripcion) {
       return res.status(404).json({
         success: false,
-        message: 'Inscripción no encontrada'
+        message: "Inscripción no encontrada",
       });
     }
 
@@ -409,12 +391,12 @@ const registrarAsistencia = async (req, res) => {
     const [asistencia, created] = await AsistenciaExamenFinal.findOrCreate({
       where: {
         id_examen_final: idExamen,
-        id_usuario_alumno
+        id_usuario_alumno,
       },
       defaults: {
         presente,
-        realizado_por
-      }
+        realizado_por,
+      },
     });
 
     if (!created) {
@@ -426,16 +408,15 @@ const registrarAsistencia = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Asistencia registrada correctamente',
-      data: asistencia
+      message: "Asistencia registrada correctamente",
+      data: asistencia,
     });
-
   } catch (error) {
-    console.error('Error al registrar asistencia:', error);
+    console.error("Error al registrar asistencia:", error);
     res.status(500).json({
       success: false,
-      message: 'Error interno del servidor',
-      error: error.message
+      message: "Error interno del servidor",
+      error: error.message,
     });
   }
 };
@@ -450,20 +431,20 @@ const obtenerCalificaciones = async (req, res) => {
       include: [
         {
           model: Usuario,
-          as: 'alumno',
+          as: "alumno",
           include: [
             {
               model: Persona,
-              as: 'persona'
-            }
-          ]
-        }
-      ]
+              as: "persona",
+            },
+          ],
+        },
+      ],
     });
 
     // Obtener asistencias por separado
     const asistencias = await AsistenciaExamenFinal.findAll({
-      where: { id_examen_final: id }
+      where: { id_examen_final: id },
     });
 
     const asistenciasMap = asistencias.reduce((acc, asistencia) => {
@@ -471,30 +452,29 @@ const obtenerCalificaciones = async (req, res) => {
       return acc;
     }, {});
 
-    const calificaciones = inscripciones.map(inscripcion => ({
+    const calificaciones = inscripciones.map((inscripcion) => ({
       id_inscripcion: inscripcion.id,
       alumno: {
         id: inscripcion.alumno?.id,
         nombre: inscripcion.alumno?.persona?.nombre,
         apellido: inscripcion.alumno?.persona?.apellido,
-        email: inscripcion.alumno?.persona?.email
+        email: inscripcion.alumno?.persona?.email,
       },
       calificacion: inscripcion.nota,
       bloqueada: inscripcion.bloqueada || false,
-      asistencia: asistenciasMap[inscripcion.id_usuario_alumno] || null
+      asistencia: asistenciasMap[inscripcion.id_usuario_alumno] || null,
     }));
 
     res.status(200).json({
       success: true,
-      data: calificaciones
+      data: calificaciones,
     });
-
   } catch (error) {
-    console.error('Error al obtener calificaciones:', error);
+    console.error("Error al obtener calificaciones:", error);
     res.status(500).json({
       success: false,
-      message: 'Error interno del servidor',
-      error: error.message
+      message: "Error interno del servidor",
+      error: error.message,
     });
   }
 };
@@ -510,7 +490,7 @@ const actualizarCalificacion = async (req, res) => {
     if (calificacion < 0 || calificacion > 10) {
       return res.status(400).json({
         success: false,
-        message: 'La calificación debe estar entre 0 y 10'
+        message: "La calificación debe estar entre 0 y 10",
       });
     }
 
@@ -518,7 +498,7 @@ const actualizarCalificacion = async (req, res) => {
     if (!inscripcion) {
       return res.status(404).json({
         success: false,
-        message: 'Inscripción no encontrada'
+        message: "Inscripción no encontrada",
       });
     }
 
@@ -526,7 +506,8 @@ const actualizarCalificacion = async (req, res) => {
     if (inscripcion.bloqueada && userRole !== "Administrador") {
       return res.status(403).json({
         success: false,
-        message: 'La calificación está bloqueada. Solo un administrador puede modificarla.'
+        message:
+          "La calificación está bloqueada. Solo un administrador puede modificarla.",
       });
     }
 
@@ -537,16 +518,15 @@ const actualizarCalificacion = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Calificación actualizada correctamente',
-      data: inscripcion
+      message: "Calificación actualizada correctamente",
+      data: inscripcion,
     });
-
   } catch (error) {
-    console.error('Error al actualizar calificación:', error);
+    console.error("Error al actualizar calificación:", error);
     res.status(500).json({
       success: false,
-      message: 'Error interno del servidor',
-      error: error.message
+      message: "Error interno del servidor",
+      error: error.message,
     });
   }
 };
@@ -561,7 +541,8 @@ const actualizarConfiguracion = async (req, res) => {
     if (userRole !== "Administrador") {
       return res.status(403).json({
         success: false,
-        message: 'Solo los administradores pueden modificar la configuración del examen'
+        message:
+          "Solo los administradores pueden modificar la configuración del examen",
       });
     }
 
@@ -569,7 +550,7 @@ const actualizarConfiguracion = async (req, res) => {
     if (!examen) {
       return res.status(404).json({
         success: false,
-        message: 'Examen no encontrado'
+        message: "Examen no encontrado",
       });
     }
 
@@ -579,16 +560,16 @@ const actualizarConfiguracion = async (req, res) => {
       if (!fechaExamen || isNaN(fechaExamen.getTime())) {
         return res.status(400).json({
           success: false,
-          message: 'La fecha proporcionada no es válida'
+          message: "La fecha proporcionada no es válida",
         });
       }
 
       const hoy = new Date();
-      
+
       if (compararSoloFechas(fechaExamen, hoy) < 0) {
         return res.status(400).json({
           success: false,
-          message: 'La fecha del examen no puede ser en el pasado'
+          message: "La fecha del examen no puede ser en el pasado",
         });
       }
 
@@ -601,7 +582,7 @@ const actualizarConfiguracion = async (req, res) => {
       if (!profesor) {
         return res.status(404).json({
           success: false,
-          message: 'Profesor no encontrado'
+          message: "Profesor no encontrado",
         });
       }
       examen.id_usuario_profesor = id_usuario_profesor;
@@ -612,16 +593,15 @@ const actualizarConfiguracion = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Configuración del examen actualizada correctamente',
-      data: examen
+      message: "Configuración del examen actualizada correctamente",
+      data: examen,
     });
-
   } catch (error) {
-    console.error('Error al actualizar configuración:', error);
+    console.error("Error al actualizar configuración:", error);
     res.status(500).json({
       success: false,
-      message: 'Error interno del servidor',
-      error: error.message
+      message: "Error interno del servidor",
+      error: error.message,
     });
   }
 };
@@ -633,10 +613,11 @@ const bloquearCalificacion = async (req, res) => {
     const { bloqueada } = req.body;
 
     // Verificar que es administrador
-    if (req.user.rol !== 'Administrador') {
+    if (req.user.rol !== "Administrador") {
       return res.status(403).json({
         success: false,
-        message: 'Solo los administradores pueden modificar el estado de bloqueo'
+        message:
+          "Solo los administradores pueden modificar el estado de bloqueo",
       });
     }
 
@@ -646,7 +627,7 @@ const bloquearCalificacion = async (req, res) => {
     if (!inscripcion) {
       return res.status(404).json({
         success: false,
-        message: 'Inscripción no encontrada'
+        message: "Inscripción no encontrada",
       });
     }
 
@@ -657,16 +638,17 @@ const bloquearCalificacion = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Calificación ${bloqueada ? 'bloqueada' : 'desbloqueada'} correctamente`,
-      data: inscripcion
+      message: `Calificación ${
+        bloqueada ? "bloqueada" : "desbloqueada"
+      } correctamente`,
+      data: inscripcion,
     });
-
   } catch (error) {
-    console.error('Error al cambiar estado de bloqueo:', error);
+    console.error("Error al cambiar estado de bloqueo:", error);
     res.status(500).json({
       success: false,
-      message: 'Error interno del servidor',
-      error: error.message
+      message: "Error interno del servidor",
+      error: error.message,
     });
   }
 };
@@ -676,60 +658,86 @@ const obtenerProfesoresPorMateria = async (req, res) => {
   try {
     const { idMateria } = req.params;
 
-    // Buscar todos los profesores que enseñan esta materia
+    // Buscar todos los profesores que han enseñado esta materia históricamente
     const profesores = await ProfesorMateria.findAll({
       include: [
         {
           model: MateriaPlanCicloLectivo,
-          as: 'ciclo',
+          as: "ciclo",
+          attributes: ["id", "ciclo_lectivo"], // Incluir ciclo_lectivo para referencia
           include: [
             {
               model: MateriaPlan,
-              as: 'materiaPlan',
-              where: { id_materia: idMateria }
-            }
-          ]
+              as: "materiaPlan",
+              attributes: ["id", "id_materia"],
+              where: { id_materia: idMateria },
+            },
+          ],
         },
         {
           model: Usuario,
-          as: 'profesor',
+          as: "profesor",
+          attributes: ["id"],
           include: [
             {
               model: Persona,
-              as: 'persona'
-            }
-          ]
-        }
-      ]
+              as: "persona",
+              attributes: ["nombre", "apellido", "email"],
+            },
+          ],
+        },
+      ],
     });
 
-    // Formatear la respuesta eliminando duplicados
-    const profesoresUnicos = [];
-    const idsVistos = new Set();
+    // Formatear la respuesta eliminando duplicados y agregando información histórica
+    const profesoresMap = new Map();
 
-    profesores.forEach(pm => {
-      if (pm.profesor && !idsVistos.has(pm.profesor.id)) {
-        idsVistos.add(pm.profesor.id);
-        profesoresUnicos.push({
-          id: pm.profesor.id,
-          nombre: pm.profesor.persona?.nombre,
-          apellido: pm.profesor.persona?.apellido,
-          email: pm.profesor.persona?.email
-        });
+    profesores.forEach((pm) => {
+      if (pm.profesor && pm.profesor.id) {
+        const profesorId = pm.profesor.id;
+        
+        if (!profesoresMap.has(profesorId)) {
+          profesoresMap.set(profesorId, {
+            id: pm.profesor.id,
+            nombre: pm.profesor.persona?.nombre,
+            apellido: pm.profesor.persona?.apellido,
+            email: pm.profesor.persona?.email,
+            ciclosLectivos: new Set(), // Para almacenar los ciclos únicos
+            rol: pm.rol // Tomar el rol (puede variar por ciclo)
+          });
+        }
+        
+        // Agregar el ciclo lectivo a la lista
+        if (pm.ciclo?.ciclo_lectivo) {
+          profesoresMap.get(profesorId).ciclosLectivos.add(pm.ciclo.ciclo_lectivo);
+        }
       }
     });
 
+    // Convertir Map a array y formatear la respuesta final
+    const profesoresUnicos = Array.from(profesoresMap.values()).map(profesor => ({
+      id: profesor.id,
+      nombre: profesor.nombre,
+      apellido: profesor.apellido,
+      email: profesor.email,
+      rol: profesor.rol,
+      ciclosLectivos: Array.from(profesor.ciclosLectivos).sort((a, b) => b - a), // Ordenar de más reciente a más antiguo
+      cantidadCiclos: profesor.ciclosLectivos.size
+    }));
+
+    console.log(`Encontrados ${profesoresUnicos.length} profesores únicos para la materia ${idMateria}`); // Debug
+
     res.status(200).json({
       success: true,
-      data: profesoresUnicos
+      data: profesoresUnicos,
+      message: `Se encontraron ${profesoresUnicos.length} profesores que han enseñado esta materia`
     });
-
   } catch (error) {
-    console.error('Error al obtener profesores por materia:', error);
+    console.error("Error al obtener profesores por materia:", error);
     res.status(500).json({
       success: false,
-      message: 'Error interno del servidor',
-      error: error.message
+      message: "Error interno del servidor",
+      error: error.message,
     });
   }
 };
@@ -744,5 +752,5 @@ module.exports = {
   actualizarCalificacion,
   actualizarConfiguracion,
   bloquearCalificacion,
-  obtenerProfesoresPorMateria
+  obtenerProfesoresPorMateria,
 };

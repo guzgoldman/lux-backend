@@ -19,6 +19,8 @@ const gestionExamenFinalRoutes = require("../modules/admin/gestionExamenFinal/ex
 const errorHandler = require("../middlewares/errorHandler");
 const gestionCarreraRoutes = require("../modules/admin/gestionCarrera/carreraRoutes");
 const pdfRoutes = require('../pdf/pdf.routes')
+const alumnoRoutes = require("../modules/alumno/alumnoRoutes");
+const equivalenciasRoutes = require("../modules/admin/equivalencias/equivalenciasRoutes");
 
 const app = express();
 
@@ -51,6 +53,8 @@ app.use("/api/admin/estadisticas", estadisticasRoutes);
 app.use("/api/admin/clase", gestionClaseRoutes);
 app.use("/api/admin/asistencia", gestionAsistenciaRoutes);
 app.use("/api/admin/examen-final", gestionExamenFinalRoutes);
+app.use("/api/alumno", alumnoRoutes);
+app.use("/api/equivalencia", equivalenciasRoutes);
 
 app.use(errorHandler);
 

@@ -1,6 +1,9 @@
 const {
     PlanEstudio,
-    Carrera
+    Carrera,
+    Persona,
+    AlumnoCarrera,
+    Usuario
 } = require('../../../models');
 
 exports.registrarPlanEstudio = async (req, res, next) => {
@@ -75,3 +78,30 @@ exports.cambiarEstadoPlanEstudio = async (req, res, next) => {
         next(err);
     }
 }
+
+exports.obtenerPlanEstudioAlumno = async (req, res, next) => {
+  const idUsuario = req.user.id;
+
+  try {
+    const planAlumno = await Usuario.findByPk(idUsuario, {
+      attributes: ["id", "id_persona"],
+      include: {
+        model: Persona,
+        as: "persona",
+        attributes: ["id"],
+        include: {
+          model: AlumnoCarrera,
+          as: "carreras",
+          attributes: ["id_plan_estudio_asignado", "activo"],
+          where: { activo: 1 }
+        }
+      }
+    });
+    const planAsignado = planAlumno?.persona?.carreras?.[0]?.id_plan_estudio_asignado;
+
+    res.status(200).json({ planAsignado });
+  } catch (err) {
+    console.error('Error completo:', err);
+    next(err);
+  }
+};

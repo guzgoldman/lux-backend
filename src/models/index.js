@@ -163,16 +163,16 @@ Correlativa.belongsTo(MateriaPlan, {
   foreignKey: "id_materia_plan_correlativa",
 });
 
-ExamenFinal.belongsTo(MateriaPlanCicloLectivo, {
-  as: "ciclo",
-  foreignKey: "id_materia_plan_ciclo_lectivo",
+ExamenFinal.belongsTo(MateriaPlan, {
+  as: "materiaPlan",
+  foreignKey: "id_materia_plan",
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
 });
 
-MateriaPlanCicloLectivo.hasMany(ExamenFinal, {
+MateriaPlan.hasMany(ExamenFinal, {
   as: "examenes",
-  foreignKey: "id_materia_plan_ciclo_lectivo",
+  foreignKey: "id_materia_plan",
 });
 
 ExamenFinal.belongsTo(Usuario, {
