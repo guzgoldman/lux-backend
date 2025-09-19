@@ -8,12 +8,7 @@ const {
   HorarioMateria,
   Evaluacion,
   AlumnoCarrera,
-  Materia,
-  HorarioMateria,
-  Evaluacion,
-  AlumnoCarrera,
   Carrera,
-  Rol,
   PlanEstudio,
   ProfesorMateria,
   MateriaPlan,
@@ -61,8 +56,9 @@ exports.getMateriasPorCarrera = async (req, res) => {
   try {
     const { idCarrera } = req.params;
     const idAlumnoBuscado = req.user.id;
-    const alumno = await Usuario.findByPk(idAlumnoBuscado , {
-      attributes: ["id_persona"]
+
+    const alumno = await Usuario.findByPk(idAlumnoBuscado, {
+      attributes: ["id_persona"],
     });
 
     const idAlumno = alumno?.id_persona;
@@ -77,10 +73,9 @@ exports.getMateriasPorCarrera = async (req, res) => {
     if (!inscripcion) {
       return res
         .status(404)
-        .json({ message: "El alumno no esta inscripto en esta carrera. " });
+        .json({ message: "El alumno no está inscripto en esta carrera." });
     }
 
-    // Obtener todos los planes de estudio para la carrera
     const planesEstudio = await PlanEstudio.findAll({
       where: { id_carrera: idCarrera },
       attributes: ["id"],
@@ -94,51 +89,43 @@ exports.getMateriasPorCarrera = async (req, res) => {
 
     const planEstudioIds = planesEstudio.map((plan) => plan.id);
 
-    //Obtener las materias en las que se inscribio el alumno en esa carrera
     const materiasInscriptas = await InscripcionMateria.findAll({
-      where: { id_usuario_alumno: idAlumno },
-      include: [
-        {
-          model: MateriaPlanCicloLectivo,
-          as: "ciclo",
-          attributes: ["id"],
-          include: [
-            {
-              model: Materia,
-              as: "materia",
-              attributes: ["id", "nombre"],
-              include: [
-                {
-                  model: MateriaPlan,
-                  as: "materiaPlans",
-                  where: {
-                    id_plan_estudio: planEstudioIds,
-                  },
-                },
-              ],
-            },
-
-            {
-              model: ProfesorMateria,
-              as: "profesores",
-              attributes: [],
-              include: [
-                { model: Usuario, as: "usuario", attributes: ["id", "id_persona"]include : [
-                {
-                  model: Persona,
-                  as: "persona",
-                  attributes: ["nombre", "apellido"],
-                },
-              ],
-               },
-              ],
-            },
-          ],
+        where: {
+          id_usuario_alumno: idAlumnoBuscado,
         },
-      ],
-    });
+        include: [
+          {
+            model: MateriaPlanCicloLectivo,
+            as: "ciclo",
+            include: [
+              {
+                model: Materia,
+                as: "materia",
+                attributes: ["id", "nombre"],
+              },
+              {
+                model: ProfesorMateria,
+                as: "profesores",
+                include: [
+                  {
+                    model: Usuario,
+                    as: "profesor",
+                    include: [
+                      {
+                        model: Persona,
+                        as: "persona",
+                        attributes: ["nombre", "apellido"],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
 
-    // Función que transforma los datos para el frontend
+
     const resumenMateriasAlumno = materiasInscriptas.map((item) => ({
       id: item.ciclo.materia.id,
       nombre: item.ciclo.materia.nombre,
@@ -146,17 +133,14 @@ exports.getMateriasPorCarrera = async (req, res) => {
       nota: item.nota_final,
       profesor: item.ciclo.profesores
         ? item.ciclo.profesores
-            .map((p) => `${p.persona.nombre} ${p.persona.apellido}`)
+            .map((p) => `${p.profesor.persona.nombre} ${p.profesor.persona.apellido}`)
             .join(", ")
         : "Sin profesor asignado",
     }));
-    res.status(200).json(resumenMateriasAlumno);
+    
+    return res.status(200).json(resumenMateriasAlumno);
   } catch (error) {
     console.error("Error al obtener las materias del alumno: ", error);
-    res.status(500).json({ message: "Error interno del servidor." });
-    console.error("Error al obtener las materias del alumno: ", error);
-    res.status(500).json({ message: "Error interno del servidor." });
+    return res.status(500).json({ message: "Error interno del servidor." });
   }
 };
-
-
