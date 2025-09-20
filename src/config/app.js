@@ -17,7 +17,7 @@ const gestionClaseRoutes = require("../modules/admin/gestionClase/claseRoutes");
 const gestionAsistenciaRoutes = require("../modules/admin/gestionAsistencia/asistenciaRoutes");
 const errorHandler = require("../middlewares/errorHandler");
 const gestionCarreraRoutes = require("../modules/admin/gestionCarrera/carreraRoutes");
-const alumnoRoutes =require("../modules/Alumno/alumnoRoutes")
+const alumnoRoutes = require("../modules/Alumno/alumnoRoutes")
 const pdfRoutes = require('../pdf/pdf.routes')
 
 const app = express();
@@ -25,7 +25,7 @@ const app = express();
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "http://192.168.100.119:5173",
+    origin: ${process.env.CORS_ORIGIN},
     credentials: true,
   })
 );
