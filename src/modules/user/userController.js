@@ -309,11 +309,9 @@ exports.getCarrerasInscripto = async (req, res) => {
     // Aplicar filtros específicos si se proporcionan
     if (activo !== undefined || carrera) {
       const carreraWhere = {};
-
       if (activo !== undefined) {
         carreraWhere.activo = activo === "true" ? 1 : 0;
       }
-
       if (carrera) {
         carreraWhere.id_carrera = carrera;
       }
@@ -467,7 +465,6 @@ exports.listarAlumnos = async (req, res, next) => {
     // Aplicar filtros específicos si se proporcionan
     if (activo !== undefined || carrera) {
       const carreraWhere = {};
-
       if (activo !== undefined) {
         carreraWhere.activo = activo === "true" ? 1 : 0;
       }
@@ -475,7 +472,6 @@ exports.listarAlumnos = async (req, res, next) => {
       if (carrera) {
         carreraWhere.id_carrera = carrera;
       }
-
       carreraInclude.where = carreraWhere;
       carreraInclude.required = true; // INNER JOIN cuando hay filtros específicos
     }
@@ -539,6 +535,48 @@ exports.listarAlumnos = async (req, res, next) => {
     res.json(alumnosFormateados);
   } catch (error) {
     console.error("Error al listar alumnos:", error);
+    next(error);
+  }
+};
+exports.buscarAlumnos = async (req, res, next) => {
+  try {
+    const term = req.query.term;
+    if (!term) {
+      return res.status(400).json({ message: "Término de búsqueda requerido" });
+    }
+    const alumnos = await Usuario.findAll({
+      where: {},
+      include: [
+        {
+          model: Persona,
+          as: "persona",
+          attributes: ["nombre", "apellido", "dni"],
+          where: {
+            [Op.or]: [
+              { dni: { [Op.like]: `%${term}%` } },
+              { nombre: { [Op.like]: `%${term}%` } },
+              { apellido: { [Op.like]: `%${term}%` } },
+            ],
+          },
+        },
+        {
+          model: RolUsuario,
+          as: "rol_usuarios",
+          include: [
+            { model: Rol, as: "rol", where: { nombre: "Alumno" } },
+          ],
+        },
+      ],
+      limit: 10,
+    });
+    const resultados = alumnos.map((a) => ({
+      id: a.id,
+      nombre: a.persona.nombre,
+      apellido: a.persona.apellido,
+      dni: a.persona.dni,
+    }));
+    res.json(resultados);
+  } catch (error) {
     next(error);
   }
 };
