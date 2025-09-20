@@ -18,6 +18,7 @@ const gestionAsistenciaRoutes = require("../modules/admin/gestionAsistencia/asis
 const errorHandler = require("../middlewares/errorHandler");
 const gestionCarreraRoutes = require("../modules/admin/gestionCarrera/carreraRoutes");
 const alumnoRoutes = require("../modules/Alumno/alumnoRoutes")
+const equivalenciasRoutes = require("../modules/admin/equivalencias/equivalenciasRoutes");
 const pdfRoutes = require('../pdf/pdf.routes')
 
 const app = express();
@@ -50,7 +51,8 @@ app.use("/api/admin/profesor", gestionProfesorRoutes);
 app.use("/api/admin/estadisticas", estadisticasRoutes);
 app.use("/api/admin/clase", gestionClaseRoutes);
 app.use("/api/admin/asistencia", gestionAsistenciaRoutes);
-app.use("/api/admin/alumno", alumnoRoutes);
+app.use("/api/alumno", alumnoRoutes);
+app.use("/api/equivalencia", equivalenciasRoutes);
 
 app.use(errorHandler);
 
