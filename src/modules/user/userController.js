@@ -309,11 +309,9 @@ exports.getCarrerasInscripto = async (req, res) => {
     // Aplicar filtros específicos si se proporcionan
     if (activo !== undefined || carrera) {
       const carreraWhere = {};
-
       if (activo !== undefined) {
         carreraWhere.activo = activo === "true" ? 1 : 0;
       }
-
       if (carrera) {
         carreraWhere.id_carrera = carrera;
       }
@@ -467,7 +465,6 @@ exports.listarAlumnos = async (req, res, next) => {
     // Aplicar filtros específicos si se proporcionan
     if (activo !== undefined || carrera) {
       const carreraWhere = {};
-
       if (activo !== undefined) {
         carreraWhere.activo = activo === "true" ? 1 : 0;
       }
@@ -475,7 +472,6 @@ exports.listarAlumnos = async (req, res, next) => {
       if (carrera) {
         carreraWhere.id_carrera = carrera;
       }
-
       carreraInclude.where = carreraWhere;
       carreraInclude.required = true; // INNER JOIN cuando hay filtros específicos
     }

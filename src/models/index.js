@@ -37,6 +37,7 @@ const asistenciaExamenFinalModel = require("./asistencia_examen_final");
 const historialAsistenciaExamenFinalModel = require("./historial_asistencia_examen_final");
 const horarioMateriaModel = require("./horario_materia");
 const calificacionCuatrimestreModel = require("./calificacion_cuatrimestre");
+const acreditacionEquivalenciaModel = require("./acreditacion_equivalencia");
 
 const Persona = personaModel(sequelize, DataTypes);
 const Direccion = direccionModel(sequelize, DataTypes);
@@ -90,6 +91,9 @@ const HistorialAsistenciaExamenFinal = historialAsistenciaExamenFinalModel(
 );
 const HorarioMateria = horarioMateriaModel(sequelize, DataTypes);
 const CalificacionCuatrimestre = calificacionCuatrimestreModel(sequelize, DataTypes);
+const AcreditacionEquivalencia = acreditacionEquivalenciaModel(sequelize, DataTypes);
+
+// Definición de relaciones
 
 Persona.hasMany(Direccion, { foreignKey: "id_persona", as: "direcciones" });
 
@@ -159,16 +163,16 @@ Correlativa.belongsTo(MateriaPlan, {
   foreignKey: "id_materia_plan_correlativa",
 });
 
-ExamenFinal.belongsTo(MateriaPlanCicloLectivo, {
-  as: "ciclo",
-  foreignKey: "id_materia_plan_ciclo_lectivo",
+ExamenFinal.belongsTo(MateriaPlan, {
+  as: "materiaPlan",
+  foreignKey: "id_materia_plan",
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
 });
 
-MateriaPlanCicloLectivo.hasMany(ExamenFinal, {
+MateriaPlan.hasMany(ExamenFinal, {
   as: "examenes",
-  foreignKey: "id_materia_plan_ciclo_lectivo",
+  foreignKey: "id_materia_plan",
 });
 
 ExamenFinal.belongsTo(Usuario, {
@@ -176,6 +180,18 @@ ExamenFinal.belongsTo(Usuario, {
   foreignKey: "id_usuario_profesor",
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
+});
+
+ExamenFinal.belongsTo(Usuario, {
+  as: "usuarioCreador",
+  foreignKey: "creado_por",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+ExamenFinal.hasMany(InscripcionExamenFinal, {
+  as: "inscripciones",
+  foreignKey: "id_examen_final",
 });
 
 HistorialExamenFinal.belongsTo(ExamenFinal, {
@@ -470,6 +486,21 @@ Carrera.hasMany(AlumnoCarrera, {
   onUpdate: "CASCADE",
 });
 
+// Asociar AlumnoCarrera con PlanEstudio (plan asignado al alumno)
+AlumnoCarrera.belongsTo(PlanEstudio, {
+  foreignKey: "id_plan_estudio_asignado",
+  as: "planEstudio",
+  onDelete: "SET NULL",
+  onUpdate: "CASCADE",
+});
+
+PlanEstudio.hasMany(AlumnoCarrera, {
+  foreignKey: "id_plan_estudio_asignado",
+  as: "alumnosAsignados",
+  onDelete: "SET NULL",
+  onUpdate: "CASCADE",
+});
+
 Usuario.hasMany(InscripcionMateria, {
   foreignKey: "id_usuario_alumno",
   as: "inscripciones",
@@ -613,5 +644,6 @@ module.exports = {
   HorarioMateria,
   Preinscripcion,
   PreinscripcionEstado,
-  CalificacionCuatrimestre
+  CalificacionCuatrimestre,
+  AcreditacionEquivalencia
 };

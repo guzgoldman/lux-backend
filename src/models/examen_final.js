@@ -3,9 +3,9 @@ module.exports = (sequelize, DataTypes) => {
     'examen_final',
     {
       id:                           { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-      id_materia_plan_ciclo_lectivo:{ type: DataTypes.INTEGER, allowNull: false },
+      id_materia_plan:              { type: DataTypes.INTEGER, allowNull: false },
       fecha:                        { type: DataTypes.DATE },
-      estado:                       { type: DataTypes.STRING(20), defaultValue: 'PENDIENTE' },
+      estado:                       { type: DataTypes.STRING(20), defaultValue: 'Pendiente' },
       id_usuario_profesor:          { type: DataTypes.INTEGER, allowNull: false },
       creado_por:                   { type: DataTypes.INTEGER, allowNull: false },
       fecha_creacion:               { type: DataTypes.DATE, defaultValue: sequelize.literal('CURRENT_TIMESTAMP') },

@@ -6,6 +6,7 @@ const {
   Carrera,
   PreinscripcionEstado,
 } = require("../../models");
+  const { enqueueEmail } = require("../../queues/email.queue")
 
 exports.createPreinscripcion = async (req, res, next) => {
   const t = await sequelize.transaction();
@@ -79,6 +80,57 @@ exports.createPreinscripcion = async (req, res, next) => {
       minute: "2-digit",
       hour12: false,
     });
+
+    try {
+      await enqueueEmail({
+        to: persona.email,
+        subject: "ISNSLBV - Preinscripción recibida",
+        text: `Hola ${persona.nombre},
+            Recibimos tu preinscripción a la carrera de ${
+              carrera ? carrera.nombre : req.body.carrera
+            }.
+            Tu número de registro es ${registrationNumber}, realizada el ${submissionDate} a las ${submissionTime}.
+            Para concretar tu inscripción al instituto, deberás presentarte en Secretaría con la siguiente documentación:
+            - Fotocopia de DNI
+            - Analítico o Constancia de analítico en trámite
+            - 2 fotos 4x4
+            - Apto psicofísico emitido por cualquier médico matriculado
+            - Fotocopia de Partida de Nacimiento
+
+            Asimismo, deberás firmar el formulario de inscripción que te entregaremos en el momento.
+
+            Podés asistir de Lunes a Viernes de 19hs. a 21:30hs. en Ruta 8 Nº 6725, 2º piso.
+
+            Ante cualquier duda, podés contactarnos al 5263-2395 o por nuestro email: terciario@lujanbuenviaje.edu.ar
+
+            Te esperamos.
+            Saludos,
+            Secretaría del Instituto Nuestra Señora de Luján del Buen Viaje`,
+        html: `<p>Hola ${persona.nombre},</p>
+            <p>Recibimos tu preinscripción a la carrera de ${
+              carrera ? carrera.nombre : req.body.carrera
+            }.</p>
+            <p>Tu número de registro es <strong>${registrationNumber}</strong>, realizada el <strong>${submissionDate}</strong> a las <strong>${submissionTime}</strong>.</p>
+            <p>Para concretar tu inscripción al instituto, deberás presentarte en Secretaría con la siguiente documentación:</p>
+            <ul>
+            <li>Fotocopia de DNI</li>
+            <li>Analítico o Constancia de analítico en trámite</li>
+            <li>2 fotos 4x4</li>
+            <li>Apto psicofísico emitido por cualquier médico matriculado</li>
+            <li>Fotocopia de Partida de Nacimiento</li>
+            </ul>
+            <br/>
+            <p>Asimismo, deberás firmar el formulario de inscripción que te entregaremos en el momento.</p>
+            <p>Podés asistir de Lunes a Viernes de 19hs. a 21:30hs. en Ruta 8 Nº 6725, 2º piso.</p>
+            <br/>
+            <p>Ante cualquier duda, podés contactarnos al 5263-2395 o por nuestro email: terciario@lujanbuenviaje.edu.ar</p>
+            <br/>
+            <p>Te esperamos.</p>
+            <p>Saludos,<br/>Secretaría del Instituto Nuestra Señora de Luján del Buen Viaje</p>`,
+      });
+    } catch (queueErr) {
+      console.error("Error al encolar email de confirmación:", queueErr);
+    }
 
     res.status(201).json({
       message: "Preinscripción recibida",

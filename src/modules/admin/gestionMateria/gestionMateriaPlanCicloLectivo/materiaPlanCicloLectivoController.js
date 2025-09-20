@@ -73,9 +73,7 @@ exports.listarMateriasPlanCicloLectivo = async (req, res, next) => {
               {
                 model: Usuario,
                 as: "profesor",
-                include: [
-                  { model: Persona, as: "persona" },
-                ],
+                include: [{ model: Persona, as: "persona" }],
               },
             ],
           },
@@ -519,6 +517,66 @@ exports.actualizarCalificacionCuatrimestre = async (req, res, next) => {
 
     res.json(calificacionCuatrimestre);
   } catch (err) {
+    next(err);
+  }
+};
+
+exports.listarMateriaPlanCicloActual = async (req, res, next) => {
+  const { planId } = req.params;
+  const currentYear = new Date().getFullYear();
+
+  try {
+    const plan = await PlanEstudio.findByPk(planId, {
+      attributes: ["id", "resolucion"],
+    });
+
+    if (!plan) {
+      return res.status(404).json({ error: 'Plan de estudio no encontrado' });
+    }
+
+    const materias = await MateriaPlanCicloLectivo.findAll({
+      where: { ciclo_lectivo: currentYear },
+      include: [
+        {
+          model: MateriaPlan,
+          as: "materiaPlan",
+          attributes: ["id"],
+          where: { id_plan_estudio: plan.id },
+          include: [
+            { 
+              model: Materia, 
+              as: "materia", 
+              attributes: ["id", "nombre"] 
+            }
+          ],
+        },
+      ],
+    });
+
+    // Formatear la respuesta para ser menos verbosa
+    const materiasFormateadas = materias.map(materia => ({
+      id: materia.id,
+      nombre: materia.materiaPlan?.materia?.nombre || 'Sin nombre',
+      idMateria: materia.materiaPlan?.materia?.id || null,
+      idMateriaPlan: materia.materiaPlan?.id || null,
+      cicloLectivo: materia.ciclo_lectivo,
+      fechaInicio: materia.fecha_inicio,
+      fechaCierre: materia.fecha_cierre,
+      tipoAprobacion: materia.tipo_aprobacion
+    }));
+    
+    res.json({
+      success: true,
+      planEstudio: {
+        id: plan.id,
+        resolucion: plan.resolucion
+      },
+      cicloLectivo: currentYear,
+      materias: materiasFormateadas,
+      total: materiasFormateadas.length
+    });
+  } catch (err) {
+    console.error('Error en listarMateriaPlanCicloActual:', err);
     next(err);
   }
 };
