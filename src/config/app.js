@@ -21,7 +21,7 @@ const gestionCarreraRoutes = require("../modules/admin/gestionCarrera/carreraRou
 const alumnoRoutes = require("../modules/Alumno/alumnoRoutes")
 const equivalenciasRoutes = require("../modules/admin/equivalencias/equivalenciasRoutes");
 const pdfRoutes = require('../pdf/pdf.routes')
-const alumnoRoutes = require("../modules/alumno/alumnoRoutes");
+const alumnoRoutes = require("../modules/Alumno/alumnoRoutes");
 const equivalenciasRoutes = require("../modules/admin/equivalencias/equivalenciasRoutes");
 
 const app = express();
@@ -29,7 +29,7 @@ const app = express();
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ${process.env.CORS_ORIGIN},
+    origin: "http://192.168.0.18:5173",
     credentials: true,
   })
 );
