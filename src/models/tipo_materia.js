@@ -1,13 +1,12 @@
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
-    "materia",
+    "tipo_materia",
     {
       id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-      id_tipo_materia: { type: DataTypes.INTEGER, allowNull: true },
-      nombre: { type: DataTypes.STRING(50), allowNull: false },
+      descripcion: { type: DataTypes.STRING(50), allowNull: false },
     },
     {
-      tableName: "materia",
+      tableName: "tipo_materia",
       timestamps: false,
     }
   );

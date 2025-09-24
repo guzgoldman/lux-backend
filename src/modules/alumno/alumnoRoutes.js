@@ -1,12 +1,15 @@
 const express = require("express");
 const router = express.Router();
-const { 
-    registrarInscripcionMateria, 
-    verificarEstadoInscripcionMaterias 
+const {
+  getCarrerasInscripto,
+  getMateriasPorCarrera,
 } = require("./alumnoController");
-const { verifyToken, requireRole } = require("../../middlewares/auth");
+const { verifyToken } = require("../../middlewares/auth");
 
-router.post("/inscripcion-materia/:idMateriaPlanCicloLectivo", verifyToken, requireRole("Alumno"), registrarInscripcionMateria);
-router.get("/verificar-estado-inscripciones/:planId", verifyToken, requireRole("Alumno"), verificarEstadoInscripcionMaterias);
+// Carreras en las que está inscripto el alumno autenticado
+router.get("/carreras", verifyToken, getCarrerasInscripto);
+
+// Materias de una carrera específica del alumno autenticado
+router.get("/carreras/:idCarrera/materias", verifyToken, getMateriasPorCarrera);
 
 module.exports = router;

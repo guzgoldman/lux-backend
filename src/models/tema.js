@@ -1,13 +1,13 @@
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
-    'tema',
+    "tema",
     {
-      id:          { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-      descripcion: { type: DataTypes.TEXT, allowNull: false }
+      id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+      descripcion: { type: DataTypes.TEXT, allowNull: false },
     },
     {
-      tableName: 'tema',
-      timestamps: false
+      tableName: "tema",
+      timestamps: false,
     }
   );
 };

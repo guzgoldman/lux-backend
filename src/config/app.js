@@ -18,18 +18,16 @@ const gestionAsistenciaRoutes = require("../modules/admin/gestionAsistencia/asis
 const gestionExamenFinalRoutes = require("../modules/admin/gestionExamenFinal/examenFinalRoutes");
 const errorHandler = require("../middlewares/errorHandler");
 const gestionCarreraRoutes = require("../modules/admin/gestionCarrera/carreraRoutes");
-const alumnoRoutes = require("../modules/Alumno/alumnoRoutes")
 const equivalenciasRoutes = require("../modules/admin/equivalencias/equivalenciasRoutes");
-const pdfRoutes = require('../pdf/pdf.routes')
+const pdfRoutes = require('../pdf/pdf.routes');
 const alumnoRoutes = require("../modules/alumno/alumnoRoutes");
-const equivalenciasRoutes = require("../modules/admin/equivalencias/equivalenciasRoutes");
 
 const app = express();
 
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ${process.env.CORS_ORIGIN},
+    origin: `${process.env.CORS_ORIGIN}`,
     credentials: true,
   })
 );
