@@ -81,7 +81,6 @@ router.post(
   registrarClaseInformacion
 );
 
-// Rutas para calificaciones
 router.get(
   "/:id/calificaciones/:periodo",
   verifyToken,

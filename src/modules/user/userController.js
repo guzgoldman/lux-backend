@@ -538,3 +538,15 @@ exports.listarAlumnos = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.obtenerIdPersona = async (req, res, next) => {
+  try {
+    const idUsuario = req.user.id;
+    const usuario = await Usuario.findByPk(idUsuario, {
+      attributes: ["id_persona"],
+    });
+    res.json({ id_persona: usuario.id_persona });
+  } catch (error) {
+    next(error);
+  }
+};
