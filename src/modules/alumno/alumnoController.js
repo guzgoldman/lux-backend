@@ -415,50 +415,86 @@ exports.verificarEstadoInscripcionMaterias = async (req, res) => {
   }
 };
 
-exports.obtenerFinalesPorCarrera = async (req, res) => {
-  const idAlumno = req.user.id;
-  const { idCarrera } = req.params;
-  const finales = await InscripcionExamenFinal.findAll({
-    where: { id_usuario_alumno: idAlumno, },
-    include: [
-      {
-        model: ExamenFinal,
-        as: "examenFinal",
-        include: [
-          {
-            model: MateriaPlan,
-            as: "materiaPlan",
-            include: [
-              {
-                model: Materia,
-                as: "materia",
-              },
-              {
-                model: PlanEstudio,
-                as: "planEstudio",
-                include: [
-                  {
-                    model: Carrera,
-                    as: "carrera",
-                    where: { id: idCarrera },
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            model: Usuario,
-            as: "Profesor",
-            include: [
-              {
-                model: Persona,
-                as: "persona",
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  });
-  res.json(finales);
+exports.listarExamenesPorPlan = async (req, res) => {
+  const { idPlan } = req.params;
+  try {
+    const examenes = await ExamenFinal.findAll({
+      attributes: ["id", "fecha", "estado", "id_usuario_profesor"],
+      include: [
+        {
+          model: MateriaPlan,
+          as: "materiaPlan",
+          attributes: ["id", "id_materia"],
+          include: [
+            {
+              model: Materia,
+              as: "materia",
+              attributes: ["id", "id_tipo_materia", "nombre"],
+            },
+            {
+              model: PlanEstudio,
+              as: "planEstudio",
+              where: { id: idPlan },
+              attributes: ["id", "resolucion"],
+            },
+          ],
+        },
+        {
+          model: Usuario,
+          as: "Profesor",
+          attributes: ["id", "id_persona"],
+          include: [
+            {
+              model: Persona,
+              as: "persona",
+              attributes: ["nombre", "apellido"],
+            },
+          ],
+        },
+      ],
+      order: [["fecha", "DESC"]],
+    });
+    res.json(examenes);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error interno del servidor",
+      error: error.message,
+    });
+  }
+};
+
+exports.validarRequisitosInscripcion = async (req, res) => {
+  const { idExamenFinal } = req.params;
+  try {
+    const examenFinal = await ExamenFinal.findByPk(idExamenFinal);
+    if (!examenFinal) {
+      return res.status(404).json({
+        success: false,
+        message: "Examen final no encontrado",
+      });
+    }
+    const materiaPlan = await MateriaPlan.findByPk(examenFinal.id_materia_plan);
+    if (!materiaPlan) {
+      return res.status(404).json({
+        success: false,
+        message: "Materia plan no encontrada",
+      });
+    }
+    const correlativas = await Correlativa.findAll({
+      where: { id_materia_plan: materiaPlan.id },
+    });
+    if (correlativas.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Correlativas no cumplidas",
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error interno del servidor",
+      error: error.message,
+    });
+  }
 }

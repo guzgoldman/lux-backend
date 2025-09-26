@@ -2,14 +2,12 @@ const {
   Materia,
   MateriaPlan,
   MateriaPlanCicloLectivo,
-  Correlativa,
   InscripcionExamenFinal,
   AsistenciaExamenFinal,
   ExamenFinal,
   InscripcionMateria,
   HistorialAsistenciaExamenFinal,
   HistorialInscripcionExamenFinal,
-  CalificacionCuatrimestre,
   ProfesorMateria,
   Persona,
   Usuario,
@@ -134,48 +132,43 @@ const registrarExamenFinal = async (req, res) => {
   }
 };
 
-// Listar exámenes finales
 const listarExamenesFinales = async (req, res) => {
   try {
     const examenesFinales = await ExamenFinal.findAll({
+      attributes: [
+        "id",
+        "id_materia_plan",
+        "fecha",
+        "estado",
+        "id_usuario_profesor",
+      ],
       include: [
         {
           model: MateriaPlan,
           as: "materiaPlan",
+          attributes: ["id", "id_materia"],
           include: [
             {
               model: Materia,
               as: "materia",
+              attributes: ["id", "id_tipo_materia", "nombre"],
             },
             {
               model: PlanEstudio,
               as: "planEstudio",
-              include: [
-                {
-                  model: Carrera,
-                  as: "carrera",
-                },
-              ],
+              attributes: ["id", "resolucion"],
             },
           ],
         },
         {
           model: Usuario,
           as: "Profesor",
+          attributes: ["id", "id_persona"],
           include: [
             {
               model: Persona,
               as: "persona",
-            },
-          ],
-        },
-        {
-          model: Usuario,
-          as: "usuarioCreador",
-          include: [
-            {
-              model: Persona,
-              as: "persona",
+              attributes: ["nombre", "apellido"],
             },
           ],
         },
@@ -183,9 +176,48 @@ const listarExamenesFinales = async (req, res) => {
       order: [["fecha_creacion", "DESC"]],
     });
 
+    const data = examenesFinales.map((examen) => {
+      const plain = examen.get({ plain: true });
+      const personaProfesor = plain.Profesor?.persona;
+      return {
+        id: plain.id,
+        id_materia_plan: plain.id_materia_plan,
+        fecha: plain.fecha,
+        estado: plain.estado,
+        id_usuario_profesor: plain.id_usuario_profesor,
+        materiaPlan: plain.materiaPlan
+          ? {
+              id: plain.materiaPlan.id,
+              id_materia: plain.materiaPlan.id_materia,
+              materia: plain.materiaPlan.materia
+                ? {
+                    id: plain.materiaPlan.materia.id,
+                    id_tipo_materia: plain.materiaPlan.materia.id_tipo_materia,
+                    nombre: plain.materiaPlan.materia.nombre,
+                  }
+                : null,
+              planEstudio: plain.materiaPlan.planEstudio
+                ? {
+                    id: plain.materiaPlan.planEstudio.id,
+                    resolucion: plain.materiaPlan.planEstudio.resolucion,
+                  }
+                : null,
+            }
+          : null,
+        Profesor: personaProfesor
+          ? {
+              persona: {
+                nombre: personaProfesor.nombre,
+                apellido: personaProfesor.apellido,
+              },
+            }
+          : null,
+      };
+    });
+
     res.status(200).json({
       success: true,
-      data: examenesFinales,
+      data,
     });
   } catch (error) {
     console.error("Error al listar exámenes finales:", error);
@@ -197,7 +229,6 @@ const listarExamenesFinales = async (req, res) => {
   }
 };
 
-// Obtener detalles de un examen final específico
 const detalleExamenFinal = async (req, res) => {
   try {
     const { id } = req.params;
@@ -278,8 +309,7 @@ const detalleExamenFinal = async (req, res) => {
       estado: examen.estado,
       fecha: examen.fecha,
       carrera:
-        examen.materiaPlan?.planEstudio?.carrera?.nombre ||
-        "Sin carrera",
+        examen.materiaPlan?.planEstudio?.carrera?.nombre || "Sin carrera",
       resolucion:
         examen.materiaPlan?.planEstudio?.resolucion || "Sin resolución",
       profesor: {
@@ -695,7 +725,7 @@ const obtenerProfesoresPorMateria = async (req, res) => {
     profesores.forEach((pm) => {
       if (pm.profesor && pm.profesor.id) {
         const profesorId = pm.profesor.id;
-        
+
         if (!profesoresMap.has(profesorId)) {
           profesoresMap.set(profesorId, {
             id: pm.profesor.id,
@@ -703,34 +733,42 @@ const obtenerProfesoresPorMateria = async (req, res) => {
             apellido: pm.profesor.persona?.apellido,
             email: pm.profesor.persona?.email,
             ciclosLectivos: new Set(), // Para almacenar los ciclos únicos
-            rol: pm.rol // Tomar el rol (puede variar por ciclo)
+            rol: pm.rol, // Tomar el rol (puede variar por ciclo)
           });
         }
-        
+
         // Agregar el ciclo lectivo a la lista
         if (pm.ciclo?.ciclo_lectivo) {
-          profesoresMap.get(profesorId).ciclosLectivos.add(pm.ciclo.ciclo_lectivo);
+          profesoresMap
+            .get(profesorId)
+            .ciclosLectivos.add(pm.ciclo.ciclo_lectivo);
         }
       }
     });
 
     // Convertir Map a array y formatear la respuesta final
-    const profesoresUnicos = Array.from(profesoresMap.values()).map(profesor => ({
-      id: profesor.id,
-      nombre: profesor.nombre,
-      apellido: profesor.apellido,
-      email: profesor.email,
-      rol: profesor.rol,
-      ciclosLectivos: Array.from(profesor.ciclosLectivos).sort((a, b) => b - a), // Ordenar de más reciente a más antiguo
-      cantidadCiclos: profesor.ciclosLectivos.size
-    }));
+    const profesoresUnicos = Array.from(profesoresMap.values()).map(
+      (profesor) => ({
+        id: profesor.id,
+        nombre: profesor.nombre,
+        apellido: profesor.apellido,
+        email: profesor.email,
+        rol: profesor.rol,
+        ciclosLectivos: Array.from(profesor.ciclosLectivos).sort(
+          (a, b) => b - a
+        ), // Ordenar de más reciente a más antiguo
+        cantidadCiclos: profesor.ciclosLectivos.size,
+      })
+    );
 
-    console.log(`Encontrados ${profesoresUnicos.length} profesores únicos para la materia ${idMateria}`); // Debug
+    console.log(
+      `Encontrados ${profesoresUnicos.length} profesores únicos para la materia ${idMateria}`
+    ); // Debug
 
     res.status(200).json({
       success: true,
       data: profesoresUnicos,
-      message: `Se encontraron ${profesoresUnicos.length} profesores que han enseñado esta materia`
+      message: `Se encontraron ${profesoresUnicos.length} profesores que han enseñado esta materia`,
     });
   } catch (error) {
     console.error("Error al obtener profesores por materia:", error);

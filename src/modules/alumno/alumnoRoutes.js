@@ -5,12 +5,12 @@ const {
   getMateriasPorCarrera,
   registrarInscripcionMateria,
   verificarEstadoInscripcionMaterias,
-  obtenerFinalesPorCarrera,
+  listarExamenesPorPlan,
 } = require("./alumnoController");
 const { verifyToken, requireRole } = require("../../middlewares/auth");
 
 router.get("/carreras", verifyToken, requireRole("Alumno"), getCarrerasInscripto);
-router.get("/carreras/:idCarrera/finales", verifyToken, requireRole("Alumno"), obtenerFinalesPorCarrera);
+router.get("/planes-estudio/:idPlan/finales", verifyToken, requireRole("Alumno"), listarExamenesPorPlan);
 router.get("/carreras/:idCarrera/materias", verifyToken, requireRole("Alumno"), getMateriasPorCarrera);
 
 router.post(
