@@ -6,6 +6,7 @@ const {
   registrarInscripcionMateria,
   verificarEstadoInscripcionMaterias,
   listarExamenesPorPlan,
+  verificarEstadoInscripcionFinales,
 } = require("./alumnoController");
 const { verifyToken, requireRole } = require("../../middlewares/auth");
 
@@ -24,6 +25,12 @@ router.get(
   verifyToken,
   requireRole("Alumno"),
   verificarEstadoInscripcionMaterias
+);
+router.get(
+  "/planes-estudio/:idPlan/finales/estado",
+  verifyToken,
+  requireRole("Alumno"),
+  verificarEstadoInscripcionFinales
 );
 
 module.exports = router;

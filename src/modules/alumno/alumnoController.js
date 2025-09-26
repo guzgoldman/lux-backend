@@ -12,6 +12,7 @@ const {
   InscripcionExamenFinal,
   ExamenFinal,
   PlanEstudio,
+  CalificacionCuatrimestre,
 } = require("../../models");
 const { Op } = require("sequelize");
 
@@ -424,16 +425,19 @@ exports.listarExamenesPorPlan = async (req, res) => {
         {
           model: MateriaPlan,
           as: "materiaPlan",
+          required: true,
           attributes: ["id", "id_materia"],
           include: [
             {
               model: Materia,
               as: "materia",
+              required: true,
               attributes: ["id", "id_tipo_materia", "nombre"],
             },
             {
               model: PlanEstudio,
               as: "planEstudio",
+              required: true,
               where: { id: idPlan },
               attributes: ["id", "resolucion"],
             },
@@ -464,37 +468,275 @@ exports.listarExamenesPorPlan = async (req, res) => {
   }
 };
 
-exports.validarRequisitosInscripcion = async (req, res) => {
-  const { idExamenFinal } = req.params;
+exports.verificarEstadoInscripcionFinales = async (req, res) => {
+  const { idPlan } = req.params;
+  const idAlumno = req.user.id;
+
   try {
-    const examenFinal = await ExamenFinal.findByPk(idExamenFinal);
-    if (!examenFinal) {
-      return res.status(404).json({
-        success: false,
-        message: "Examen final no encontrado",
-      });
-    }
-    const materiaPlan = await MateriaPlan.findByPk(examenFinal.id_materia_plan);
-    if (!materiaPlan) {
-      return res.status(404).json({
-        success: false,
-        message: "Materia plan no encontrada",
-      });
-    }
-    const correlativas = await Correlativa.findAll({
-      where: { id_materia_plan: materiaPlan.id },
+    const examenes = await ExamenFinal.findAll({
+      attributes: ["id", "fecha", "estado", "id_usuario_profesor"],
+      include: [
+        {
+          model: MateriaPlan,
+          as: "materiaPlan",
+          required: true,
+          attributes: ["id", "id_materia"],
+          include: [
+            {
+              model: Materia,
+              as: "materia",
+              required: true,
+              attributes: ["id", "id_tipo_materia", "nombre"],
+            },
+            {
+              model: PlanEstudio,
+              as: "planEstudio",
+              required: true,
+              where: { id: idPlan },
+              attributes: ["id", "resolucion"],
+            },
+          ],
+        },
+        {
+          model: Usuario,
+          as: "Profesor",
+          attributes: ["id", "id_persona"],
+          include: [
+            {
+              model: Persona,
+              as: "persona",
+              attributes: ["nombre", "apellido"],
+            },
+          ],
+        },
+      ],
+      order: [["fecha", "DESC"]],
     });
-    if (correlativas.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Correlativas no cumplidas",
+
+    if (!examenes.length) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        resumen: {
+          totalFinales: 0,
+          disponiblesParaInscripcion: 0,
+          yaInscriptoFinal: 0,
+          bloqueados: 0,
+        },
       });
     }
+
+    const examenesIds = Array.from(new Set(examenes.map((examen) => examen.id)));
+    const materiaPlanIds = Array.from(
+      new Set(
+        examenes
+          .map((examen) => examen.materiaPlan?.id)
+          .filter((idMateriaPlan) => idMateriaPlan != null)
+      )
+    );
+
+    const inscripcionesFinales =
+      examenesIds.length > 0
+        ? await InscripcionExamenFinal.findAll({
+            where: {
+              id_usuario_alumno: idAlumno,
+              id_examen_final: { [Op.in]: examenesIds },
+            },
+          })
+        : [];
+
+    const inscripcionFinalSet = new Set(
+      inscripcionesFinales.map((inscripcion) => inscripcion.id_examen_final)
+    );
+
+    const inscripcionesMateria =
+      materiaPlanIds.length > 0
+        ? await InscripcionMateria.findAll({
+            where: { id_usuario_alumno: idAlumno },
+            attributes: [
+              "id",
+              "estado",
+              "nota_final",
+              "id_tipo_alumno",
+              "fecha_inscripcion",
+            ],
+            include: [
+              {
+                model: MateriaPlanCicloLectivo,
+                as: "ciclo",
+                where: { id_materia_plan: { [Op.in]: materiaPlanIds } },
+                required: true,
+                attributes: ["id", "id_materia_plan", "tipo_aprobacion"],
+              },
+              {
+                model: CalificacionCuatrimestre,
+                as: "calificaciones",
+                required: false,
+                attributes: ["calificacion"],
+              },
+            ],
+            order: [
+              ["fecha_inscripcion", "DESC"],
+              ["id", "DESC"],
+            ],
+          })
+        : [];
+
+    const inscripcionMateriaMap = new Map();
+    inscripcionesMateria.forEach((inscripcion) => {
+      const idMateriaPlan = inscripcion?.ciclo?.id_materia_plan;
+      if (!idMateriaPlan) return;
+      if (!inscripcionMateriaMap.has(idMateriaPlan)) {
+        inscripcionMateriaMap.set(idMateriaPlan, inscripcion);
+      }
+    });
+
+    const estadosFinales = examenes.map((examen) => {
+      const idExamenFinal = examen.id;
+      const idMateriaPlan = examen.materiaPlan?.id ?? null;
+      const inscripcionMateria =
+        idMateriaPlan != null
+          ? inscripcionMateriaMap.get(idMateriaPlan)
+          : null;
+
+      let puedeInscribirse = true;
+      let razonBloqueo = null;
+      let tipoAprobacion = null;
+      let promedioCalificaciones = null;
+      let notaBase = null;
+      let tipoAlumno = null;
+      const yaInscriptoFinal = inscripcionFinalSet.has(idExamenFinal);
+
+      if (yaInscriptoFinal) {
+        puedeInscribirse = false;
+        razonBloqueo = "Ya estás inscripto/a a este examen final.";
+      } else if (!inscripcionMateria) {
+        puedeInscribirse = false;
+        razonBloqueo =
+          "No registrás inscripciones a esta materia.";
+      } else {
+        const estadoInscripcion = (
+          inscripcionMateria.estado || ""
+        ).toLowerCase();
+        tipoAlumno =
+          inscripcionMateria.id_tipo_alumno != null
+            ? Number(inscripcionMateria.id_tipo_alumno)
+            : null;
+
+        if (estadoInscripcion !== "regularizada") {
+          puedeInscribirse = false;
+          razonBloqueo =
+            "La cursada aún no está regularizada.";
+        } else if (tipoAlumno === 3) {
+          puedeInscribirse = false;
+          razonBloqueo =
+            "Los alumnos oyentes no pueden inscribirse a exámenes finales.";
+        } else {
+          tipoAprobacion = inscripcionMateria.ciclo?.tipo_aprobacion || null;
+
+          if (!tipoAprobacion) {
+            puedeInscribirse = false;
+            razonBloqueo =
+              "No se pudo determinar el tipo de aprobación de la materia para validar la inscripción.";
+          } else {
+            const calificaciones = (inscripcionMateria.calificaciones || [])
+              .map((calificacion) =>
+                calificacion?.calificacion != null
+                  ? Number(calificacion.calificacion)
+                  : null
+              )
+              .filter((calificacion) => calificacion != null);
+
+            if (calificaciones.length > 0) {
+              promedioCalificaciones =
+                calificaciones.reduce((acc, nota) => acc + nota, 0) /
+                calificaciones.length;
+            }
+
+            if (tipoAprobacion === "EP") {
+              if (promedioCalificaciones == null) {
+                puedeInscribirse = false;
+                razonBloqueo =
+                  "La materia es exclusivamente promocionable y no registra calificaciones de cuatrimestre.";
+              } else if (promedioCalificaciones < 7) {
+                puedeInscribirse = false;
+                razonBloqueo =
+                  "Para materias exclusivamente promocionables el promedio de calificaciones debe ser al menos 7.";
+              }
+            } else {
+              notaBase =
+                inscripcionMateria.nota_final != null
+                  ? Number(inscripcionMateria.nota_final)
+                  : promedioCalificaciones;
+
+              if (notaBase == null) {
+                puedeInscribirse = false;
+                razonBloqueo =
+                  "La materia no registra calificaciones suficientes para validar la inscripción al examen final.";
+              } else if (notaBase < 4) {
+                puedeInscribirse = false;
+                razonBloqueo =
+                  "La calificación obtenida en la cursada debe ser igual o superior a 4 para rendir el examen final.";
+              }
+            }
+          }
+        }
+      }
+
+      return {
+        idExamenFinal,
+        idMateriaPlan,
+        fecha: examen.fecha,
+        estadoExamen: examen.estado,
+        materia: {
+          id: examen.materiaPlan?.materia?.id ?? null,
+          nombre: examen.materiaPlan?.materia?.nombre ?? null,
+        },
+        profesor: examen.Profesor
+          ? {
+              id: examen.Profesor.id,
+              nombre: examen.Profesor.persona?.nombre ?? null,
+              apellido: examen.Profesor.persona?.apellido ?? null,
+            }
+          : null,
+        puedeInscribirse,
+        razonBloqueo,
+        tipoAprobacion,
+        promedioCalificaciones,
+        notaBase,
+        tipoAlumno,
+        yaInscriptoFinal,
+      };
+    });
+
+    const resumen = {
+      totalFinales: estadosFinales.length,
+      disponiblesParaInscripcion: estadosFinales.filter(
+        (estado) => estado.puedeInscribirse
+      ).length,
+      yaInscriptoFinal: estadosFinales.filter(
+        (estado) => estado.yaInscriptoFinal
+      ).length,
+      bloqueados: estadosFinales.filter(
+        (estado) => !estado.puedeInscribirse
+      ).length,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: estadosFinales,
+      resumen,
+    });
   } catch (error) {
+    console.error(
+      "Error al verificar estado de inscripción a exámenes finales:",
+      error
+    );
     res.status(500).json({
       success: false,
-      message: "Error interno del servidor",
+      message:
+        "Error al verificar estado de inscripción a exámenes finales",
       error: error.message,
     });
   }
-}
+};
