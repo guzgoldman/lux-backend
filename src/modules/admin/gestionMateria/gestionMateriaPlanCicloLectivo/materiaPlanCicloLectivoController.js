@@ -194,7 +194,7 @@ exports.detalleMateriaPlanCicloLectivo = async (req, res, next) => {
                 {
                   model: Persona,
                   as: "persona",
-                  attributes: ["nombre", "apellido", "email"],
+                  attributes: ["nombre", "apellido", "dni"],
                 },
               ],
             },
@@ -243,11 +243,14 @@ exports.detalleMateriaPlanCicloLectivo = async (req, res, next) => {
       fechaInicio: ciclo.fecha_inicio,
       fechaCierre: ciclo.fecha_cierre,
       alumnos: (ciclo.inscripcionesCiclo || []).map((ins) => ({
+        id_inscripcion: ins.id,
         id_usuario: ins.usuario?.id,
         nombre: ins.usuario?.persona?.nombre,
         apellido: ins.usuario?.persona?.apellido,
-        email: ins.usuario?.persona?.email,
+        dni: ins.usuario?.persona?.dni,
         fecha_inscripcion: ins.fecha_inscripcion,
+        estado: ins.estado,
+        nota_final: ins.nota_final,
         calificaciones: (ins.calificaciones || []).map((c) => ({
           cuatrimestre: c.cuatrimestre,
           calificacion: Number(c.calificacion),
@@ -515,6 +518,16 @@ exports.actualizarCalificacionCuatrimestre = async (req, res, next) => {
       await calificacionCuatrimestre.save();
     }
 
+    // Actualizar estado de regularización después de crear/actualizar la calificación
+    setTimeout(async () => {
+      try {
+        const RegularizacionUtils = require("../../../../utils/regularizacion");
+        await RegularizacionUtils.actualizarEstadoRegularizacion(inscripcionId);
+      } catch (error) {
+        console.log("Error al actualizar el estado");
+      }
+    }, 200);
+
     res.json(calificacionCuatrimestre);
   } catch (err) {
     next(err);
@@ -578,5 +591,71 @@ exports.listarMateriaPlanCicloActual = async (req, res, next) => {
   } catch (err) {
     console.error('Error en listarMateriaPlanCicloActual:', err);
     next(err);
+  }
+};
+
+/**
+ * Actualizar el estado de regularización de una inscripción específica
+ */
+exports.actualizarEstadoRegularizacion = async (req, res) => {
+  try {
+    const { idInscripcion } = req.params;
+    const RegularizacionUtils = require('../../../../utils/regularizacion');
+    
+    if (!idInscripcion || isNaN(idInscripcion)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de inscripción inválido'
+      });
+    }
+
+    const resultado = await RegularizacionUtils.actualizarEstadoRegularizacion(parseInt(idInscripcion));
+    
+    if (resultado.success) {
+      res.json(resultado);
+    } else {
+      res.status(500).json(resultado);
+    }
+
+  } catch (error) {
+    console.error('Error en endpoint actualizar regularización:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Actualizar el estado de regularización de todas las inscripciones de un alumno
+ */
+exports.actualizarEstadosAlumno = async (req, res) => {
+  try {
+    const { idUsuarioAlumno } = req.params;
+    const RegularizacionUtils = require('../../../../utils/regularizacion');
+    
+    if (!idUsuarioAlumno || isNaN(idUsuarioAlumno)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de usuario alumno inválido'
+      });
+    }
+
+    const resultado = await RegularizacionUtils.actualizarEstadosAlumno(parseInt(idUsuarioAlumno));
+    
+    if (resultado.success) {
+      res.json(resultado);
+    } else {
+      res.status(500).json(resultado);
+    }
+
+  } catch (error) {
+    console.error('Error en endpoint actualizar estados alumno:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
   }
 };

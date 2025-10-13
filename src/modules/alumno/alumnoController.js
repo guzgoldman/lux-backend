@@ -84,7 +84,7 @@ exports.getMateriasPorCarrera = async (req, res) => {
     const materiasInscriptas = await InscripcionMateria.findAll({
       where: {
         id_usuario_alumno: idAlumnoBuscado,
-        estado: { [Op.in]: ["INSCRIPTO", "APROBADO"] },
+        estado: { [Op.in]: ["Cursando", "Regularizada", "Aprobada"] },
       },
       include: [
         {
@@ -213,8 +213,7 @@ exports.verificarEstadoInscripcionMaterias = async (req, res) => {
     const inscripcionesExistentes = await InscripcionMateria.findAll({
       where: {
         id_usuario_alumno: idAlumno,
-        // de momento mantenemos la misma lógica; si querés usar Op.in podés agregarlo
-        estado: ["Inscripto", "Cursando", "Aprobado"],
+        estado: ["Cursando", "Regularizada", "Aprobada"],
       },
       include: [
         {
@@ -238,7 +237,7 @@ exports.verificarEstadoInscripcionMaterias = async (req, res) => {
     const materiasAprobadas = await InscripcionMateria.findAll({
       where: {
         id_usuario_alumno: idAlumno,
-        estado: "Aprobado",
+        estado: "Aprobada",
       },
       include: [
         {

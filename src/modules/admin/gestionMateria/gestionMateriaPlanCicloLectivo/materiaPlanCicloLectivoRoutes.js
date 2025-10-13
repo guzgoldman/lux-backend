@@ -13,7 +13,9 @@ const {
   registrarClaseInformacion,
   obtenerCalificacionesCuatrimestre,
   actualizarCalificacionCuatrimestre,
-  listarMateriaPlanCicloActual
+  listarMateriaPlanCicloActual,
+  actualizarEstadoRegularizacion,
+  actualizarEstadosAlumno
 } = require("./materiaPlanCicloLectivoController");
 
 const { verifyToken, requireRole } = require("../../../../middlewares/auth");
@@ -101,5 +103,19 @@ router.get(
   requireRole("Alumno"),
   listarMateriaPlanCicloActual
 )
+
+router.put(
+  "/regularizacion/actualizar/:idInscripcion",
+  verifyToken,
+  requireRole("Administrador", "Profesor"),
+  actualizarEstadoRegularizacion
+);
+
+router.put(
+  "/regularizacion/actualizar-alumno/:idUsuarioAlumno",
+  verifyToken,
+  requireRole("Administrador"),
+  actualizarEstadosAlumno
+);
 
 module.exports = router;
