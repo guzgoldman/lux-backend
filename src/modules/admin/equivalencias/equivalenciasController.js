@@ -1,4 +1,22 @@
-const { AcreditacionEquivalencia, InscripcionMateria, Usuario, Persona, MateriaPlanCicloLectivo, MateriaPlan, Materia } = require("../../../models");
+const {
+  AcreditacionEquivalencia,
+  Materia,
+  MateriaPlan,
+  PlanEstudio,
+  MateriaPlanCicloLectivo,
+  InscripcionMateria,
+  Usuario,
+  Persona,
+  ProfesorMateria,
+  Carrera,
+  Clase,
+  HorarioMateria,
+  Tema,
+  ClaseTema,
+  ClaseProfesor,
+  CalificacionCuatrimestre,
+  AlumnoCarrera,
+} = require("../../../models");
 const { Op } = require('sequelize');
 const sequelize = require('../../../config/db');
 
@@ -110,13 +128,14 @@ exports.obtenerAlumnosConSolicitudes = async (req, res, next) => {
             {
               model: Persona,
               as: 'persona',
-              attributes: ['nombre', 'apellido', 'documento', 'email']
+              attributes: ['nombre', 'apellido', 'dni', 'email']
             }
           ]
         }
       ],
       attributes: [
         'id',
+        'id_usuario_alumno',
         'origen_institucion',
         'origen_materia', 
         'origen_calificacion',
@@ -205,26 +224,37 @@ exports.aprobarSolicitud = async (req, res, next) => {
       transaction
     });
 
-    if (inscripcionExistente) {
-      await transaction.rollback();
-      return res.status(400).json({
-        message: "El alumno ya tiene una inscripción en esta materia"
-      });
-    }
+    let inscripcion;
 
-    // Crear la inscripción en inscripcion_materia
-    const nuevaInscripcion = await InscripcionMateria.create({
-      id_usuario_alumno: solicitud.id_usuario_alumno,
-      id_materia_plan_ciclo_lectivo: idMateriaPlanCicloLectivo,
-      id_tipo_alumno: 1, // Regular
-      estado: 'APROBADA',
-      nota_final: notaFinal,
-      fecha_finalizacion: new Date(),
-      creado_por: administradorId,
-      origen_aprobacion: 'Equivalencia',
-      id_inscripcion_examen_final_aprobatorio: null,
-      id_acreditacion_equivalencia_aprobatoria: solicitud.id
-    }, { transaction });
+    if (inscripcionExistente) {
+      // Si ya existe una inscripción, actualizarla
+      await inscripcionExistente.update({
+        estado: 'Aprobada',
+        nota_final: notaFinal,
+        fecha_finalizacion: new Date(),
+        modificado_por: administradorId,
+        fecha_modificacion: new Date(),
+        origen_aprobacion: 'Equivalencia',
+        id_inscripcion_examen_final_aprobatorio: null,
+        id_acreditacion_equivalencia_aprobatoria: solicitud.id
+      }, { transaction });
+
+      inscripcion = inscripcionExistente;
+    } else {
+      // Si no existe, crear una nueva inscripción
+      inscripcion = await InscripcionMateria.create({
+        id_usuario_alumno: solicitud.id_usuario_alumno,
+        id_materia_plan_ciclo_lectivo: idMateriaPlanCicloLectivo,
+        id_tipo_alumno: 1, // Regular
+        estado: 'Aprobada',
+        nota_final: notaFinal,
+        fecha_finalizacion: new Date(),
+        creado_por: administradorId,
+        origen_aprobacion: 'Equivalencia',
+        id_inscripcion_examen_final_aprobatorio: null,
+        id_acreditacion_equivalencia_aprobatoria: solicitud.id
+      }, { transaction });
+    }
 
     // Actualizar la solicitud de equivalencia
     const datosActualizacion = {
@@ -248,7 +278,7 @@ exports.aprobarSolicitud = async (req, res, next) => {
       message: "Solicitud aprobada exitosamente",
       data: {
         solicitud: solicitud,
-        inscripcion: nuevaInscripcion
+        inscripcion: inscripcion
       }
     });
 
@@ -297,11 +327,71 @@ exports.rechazarSolicitud = async (req, res, next) => {
     });
 
     res.json({
-      message: "Solicitud rechazada exitosamente",
+      message: "Solicitud editada exitosamente",
       data: solicitud
     });
 
   } catch (error) {
+    next(error);
+  }
+};
+
+// Obtener carreras del alumno
+exports.obtenerCarrerasAlumno = async (req, res, next) => {
+  try {
+    const { idUsuario } = req.params;
+    
+    console.log('ID Usuario recibido:', idUsuario);
+
+    // Primero buscar el usuario para obtener su id_persona
+    const usuario = await Usuario.findByPk(idUsuario, {
+      attributes: ['id', 'id_persona'],
+      include: [
+        {
+          model: Persona,
+          as: 'persona',
+          attributes: ['id', 'nombre', 'apellido']
+        }
+      ]
+    });
+
+    console.log('Usuario encontrado:', usuario ? usuario.toJSON() : 'null');
+
+    if (!usuario) {
+      return res.status(404).json({
+        message: "Usuario no encontrado",
+        idBuscado: idUsuario
+      });
+    }
+
+    console.log('ID Persona del usuario:', usuario.id_persona);
+
+    // Luego buscar las carreras usando el id_persona
+    const carreras = await AlumnoCarrera.findAll({
+      where: { 
+        id_persona: usuario.id_persona,
+        activo: true 
+      },
+      include: [
+        {
+          model: Carrera,
+          as: 'carrera',
+          attributes: ['id', 'nombre']
+        },
+        {
+          model: PlanEstudio,
+          as: 'planEstudio',
+          attributes: ['id', 'resolucion']
+        }
+      ]
+    });
+
+    console.log('Carreras encontradas:', carreras.length);
+
+    res.json(carreras);
+
+  } catch (error) {
+    console.error('Error al obtener carreras del alumno:', error);
     next(error);
   }
 };

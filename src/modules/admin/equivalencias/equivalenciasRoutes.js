@@ -37,6 +37,14 @@ router.get(
   equivalenciasController.obtenerAlumnosConSolicitudes
 );
 
+// GET /api/equivalencias/admin/usuario/:idUsuario/carreras - Obtener carreras del alumno
+router.get(
+  "/admin/usuario/:idUsuario/carreras",
+  verifyToken,
+  requireRole("Administrador"),
+  equivalenciasController.obtenerCarrerasAlumno
+);
+
 // PUT /api/equivalencias/admin/:id/aprobar - Aprobar solicitud
 router.put(
   "/admin/:id/aprobar",

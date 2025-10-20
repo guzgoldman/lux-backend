@@ -100,7 +100,7 @@ router.put(
 router.get(
   "/:planId/materias-ciclo-actual",
   verifyToken,
-  requireRole("Alumno"),
+  requireRole("Administrador", "Alumno"),
   listarMateriaPlanCicloActual
 )
 

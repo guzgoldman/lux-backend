@@ -622,7 +622,12 @@ exports.verificarEstadoInscripcionFinales = async (req, res) => {
             ? Number(inscripcionMateria.id_tipo_alumno)
             : null;
 
-        if (estadoInscripcion !== "regularizada") {
+        // Si la materia ya está aprobada, no puede inscribirse al final
+        if (estadoInscripcion === "aprobada") {
+          puedeInscribirse = false;
+          razonBloqueo =
+            "Materia ya aprobada";
+        } else if (estadoInscripcion !== "regularizada") {
           puedeInscribirse = false;
           razonBloqueo =
             "La cursada aún no está regularizada.";
@@ -685,6 +690,7 @@ exports.verificarEstadoInscripcionFinales = async (req, res) => {
       return {
         idExamenFinal,
         idMateriaPlan,
+        idInscripcionMateria: inscripcionMateria?.id ?? null,
         fecha: examen.fecha,
         estadoExamen: examen.estado,
         materia: {
@@ -735,6 +741,30 @@ exports.verificarEstadoInscripcionFinales = async (req, res) => {
       success: false,
       message:
         "Error al verificar estado de inscripción a exámenes finales",
+      error: error.message,
+    });
+  }
+};
+
+exports.registrarInscripcionExamenFinal = async (req, res) => {
+  const idAlumno = req.user.id;
+  const { idExamenFinal } = req.params;
+  const { idInscripcionMateria } = req.body;
+  try {
+    await InscripcionExamenFinal.create({
+      id_usuario_alumno: idAlumno,
+      id_examen_final: idExamenFinal,
+      creado_por: idAlumno,
+      id_inscripcion_materia: idInscripcionMateria,
+    });
+    res.status(201).json({
+      success: true,
+      message: "Inscripción realizada con éxito",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error al registrar la inscripción",
       error: error.message,
     });
   }

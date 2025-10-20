@@ -7,12 +7,28 @@ const {
   verificarEstadoInscripcionMaterias,
   listarExamenesPorPlan,
   verificarEstadoInscripcionFinales,
+  registrarInscripcionExamenFinal,
 } = require("./alumnoController");
 const { verifyToken, requireRole } = require("../../middlewares/auth");
 
-router.get("/carreras", verifyToken, requireRole("Alumno"), getCarrerasInscripto);
-router.get("/planes-estudio/:idPlan/finales", verifyToken, requireRole("Alumno"), listarExamenesPorPlan);
-router.get("/carreras/:idCarrera/materias", verifyToken, requireRole("Alumno"), getMateriasPorCarrera);
+router.get(
+  "/carreras",
+  verifyToken,
+  requireRole("Alumno"),
+  getCarrerasInscripto
+);
+router.get(
+  "/planes-estudio/:idPlan/finales",
+  verifyToken,
+  requireRole("Alumno"),
+  listarExamenesPorPlan
+);
+router.get(
+  "/carreras/:idCarrera/materias",
+  verifyToken,
+  requireRole("Alumno"),
+  getMateriasPorCarrera
+);
 
 router.post(
   "/inscripcion-materia/:idMateriaPlanCicloLectivo",
@@ -31,6 +47,12 @@ router.get(
   verifyToken,
   requireRole("Alumno"),
   verificarEstadoInscripcionFinales
+);
+router.post(
+  "/examen-final/inscripcion/:idExamenFinal",
+  verifyToken,
+  requireRole("Alumno"),
+  registrarInscripcionExamenFinal
 );
 
 module.exports = router;

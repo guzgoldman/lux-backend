@@ -606,6 +606,42 @@ RolUsuario.belongsTo(Rol, { foreignKey: "id_rol" });
 Usuario.hasMany(RolUsuario, { foreignKey: "id_usuario" });
 Rol.hasMany(RolUsuario, { foreignKey: "id_rol" });
 
+// Asociaciones para AcreditacionEquivalencia
+AcreditacionEquivalencia.belongsTo(Usuario, {
+  foreignKey: "id_usuario_alumno",
+  as: "alumno",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+Usuario.hasMany(AcreditacionEquivalencia, {
+  foreignKey: "id_usuario_alumno",
+  as: "equivalencias",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+AcreditacionEquivalencia.belongsTo(MateriaPlan, {
+  foreignKey: "id_materia_destino",
+  as: "materiaDestino",
+  onDelete: "SET NULL",
+  onUpdate: "CASCADE",
+});
+
+MateriaPlan.hasMany(AcreditacionEquivalencia, {
+  foreignKey: "id_materia_destino",
+  as: "equivalencias",
+  onDelete: "SET NULL",
+  onUpdate: "CASCADE",
+});
+
+AcreditacionEquivalencia.belongsTo(Usuario, {
+  foreignKey: "autorizado_por",
+  as: "autorizador",
+  onDelete: "SET NULL",
+  onUpdate: "CASCADE",
+});
+
 module.exports = {
   sequelize,
   Persona,
