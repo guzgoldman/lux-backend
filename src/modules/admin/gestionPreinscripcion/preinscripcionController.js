@@ -6,6 +6,8 @@ const {
   RolUsuario,
   AlumnoCarrera,
   Preinscripcion,
+  Carrera,
+  PlanEstudio,
   sequelize,
 } = require("../../../models");
 const { Op } = require("sequelize");
@@ -45,6 +47,13 @@ exports.listarPreinscripcion = async (req, res, next) => {
           ],
           where: preWhere,
           required: true,
+          include: [
+            {
+              model: Carrera,
+              as: "carrera",
+              attributes: ["id", "nombre"],
+            },
+          ],
         },
       ],
       order: [["fecha_registro", "ASC"]],
@@ -58,7 +67,8 @@ exports.listarPreinscripcion = async (req, res, next) => {
 
 exports.aceptar = async (req, res, next) => {
   const { personaId } = req.params;
-  const { tipoAlumnoId, carreraId } = req.body;
+  const { carreraId } = req.body;
+  const tipoAlumnoId = 1; // Siempre Regular
 
   try {
     await sequelize.transaction(async (t) => {
@@ -74,6 +84,19 @@ exports.aceptar = async (req, res, next) => {
         throw new Error(
           "No se encontró una preinscripción pendiente para esta persona."
         );
+
+      // Obtener el plan de estudios vigente de la carrera
+      const planVigente = await PlanEstudio.findOne({
+        where: { 
+          id_carrera: carreraId,
+          vigente: 1 
+        },
+        transaction: t,
+      });
+
+      if (!planVigente) {
+        throw new Error("No se encontró un plan de estudios vigente para esta carrera");
+      }
 
       preinscripcion.estado = "Aprobada";
       preinscripcion.visible = 0;
@@ -132,6 +155,7 @@ exports.aceptar = async (req, res, next) => {
             id_persona: persona.id,
             id_carrera: carreraId,
             id_tipo_alumno: tipoAlumnoId,
+            id_plan_estudio_asignado: planVigente.id,
           },
           { transaction: t }
         );
