@@ -76,7 +76,7 @@ exports.aceptar = async (req, res, next) => {
       if (!persona) throw new Error("Persona no encontrada");
 
       const preinscripcion = await Preinscripcion.findOne({
-        where: { id_persona: persona.id, estado: "Pendiente", visible: 1 },
+        where: { id_persona: persona.id, estado: "Pendiente" },
         transaction: t,
       });
       

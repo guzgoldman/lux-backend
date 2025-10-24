@@ -769,3 +769,121 @@ exports.registrarInscripcionExamenFinal = async (req, res) => {
     });
   }
 };
+
+// Obtener los exámenes finales en los que está inscripto el alumno
+exports.getExamenesInscripto = async (req, res) => {
+  try {
+    const idAlumno = req.user.id;
+
+    // Buscar todas las inscripciones a exámenes finales del alumno
+    const inscripciones = await InscripcionExamenFinal.findAll({
+      where: { id_usuario_alumno: idAlumno },
+      include: [
+        {
+          model: ExamenFinal,
+          as: "examenFinal",
+          attributes: ["id", "fecha", "estado"],
+          include: [
+            {
+              model: MateriaPlan,
+              as: "materiaPlan",
+              attributes: ["id"],
+              include: [
+                {
+                  model: Materia,
+                  as: "materia",
+                  attributes: ["id", "nombre"],
+                },
+                {
+                  model: PlanEstudio,
+                  as: "planEstudio",
+                  attributes: ["id", "resolucion"],
+                  include: [
+                    {
+                      model: Carrera,
+                      as: "carrera",
+                      attributes: ["id", "nombre"],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              model: Usuario,
+              as: "Profesor",
+              attributes: ["id"],
+              include: [
+                {
+                  model: Persona,
+                  as: "persona",
+                  attributes: ["nombre", "apellido"],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: InscripcionMateria,
+          as: "inscripcionMateria",
+          attributes: ["id", "estado"],
+        },
+      ],
+      order: [
+        [{ model: ExamenFinal, as: "examenFinal" }, "fecha", "DESC"],
+      ],
+    });
+
+    // Formatear la respuesta
+    const examenesInscripto = inscripciones.map((inscripcion) => ({
+      idInscripcion: {
+        idUsuarioAlumno: inscripcion.id_usuario_alumno,
+        idExamenFinal: inscripcion.id_examen_final,
+      },
+      fechaInscripcion: inscripcion.fecha_inscripcion,
+      nota: inscripcion.nota,
+      bloqueada: inscripcion.bloqueada,
+      examenFinal: {
+        id: inscripcion.examenFinal?.id,
+        fecha: inscripcion.examenFinal?.fecha,
+        estado: inscripcion.examenFinal?.estado,
+      },
+      materia: {
+        id: inscripcion.examenFinal?.materiaPlan?.materia?.id,
+        nombre: inscripcion.examenFinal?.materiaPlan?.materia?.nombre,
+        codigo: inscripcion.examenFinal?.materiaPlan?.materia?.codigo,
+      },
+      carrera: {
+        id: inscripcion.examenFinal?.materiaPlan?.planEstudio?.carrera?.id,
+        nombre: inscripcion.examenFinal?.materiaPlan?.planEstudio?.carrera?.nombre,
+      },
+      planEstudio: {
+        id: inscripcion.examenFinal?.materiaPlan?.planEstudio?.id,
+        nombre: inscripcion.examenFinal?.materiaPlan?.planEstudio?.nombre,
+      },
+      profesor: inscripcion.examenFinal?.Profesor
+        ? {
+            id: inscripcion.examenFinal.Profesor.id,
+            nombre: inscripcion.examenFinal.Profesor.persona?.nombre,
+            apellido: inscripcion.examenFinal.Profesor.persona?.apellido,
+          }
+        : null,
+      inscripcionMateria: {
+        id: inscripcion.inscripcionMateria?.id,
+        estado: inscripcion.inscripcionMateria?.estado,
+      },
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: examenesInscripto,
+      total: examenesInscripto.length,
+    });
+  } catch (error) {
+    console.error("Error al obtener los exámenes inscriptos:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener los exámenes inscriptos",
+      error: error.message,
+    });
+  }
+};

@@ -8,6 +8,7 @@ const {
   listarExamenesPorPlan,
   verificarEstadoInscripcionFinales,
   registrarInscripcionExamenFinal,
+  getExamenesInscripto,
 } = require("./alumnoController");
 const { verifyToken, requireRole } = require("../../middlewares/auth");
 
@@ -53,6 +54,12 @@ router.post(
   verifyToken,
   requireRole("Alumno"),
   registrarInscripcionExamenFinal
+);
+router.get(
+  "/examenes-inscripto",
+  verifyToken,
+  requireRole("Alumno"),
+  getExamenesInscripto
 );
 
 module.exports = router;

@@ -258,6 +258,13 @@ InscripcionExamenFinal.belongsTo(ExamenFinal, {
   onUpdate: "CASCADE",
 });
 
+InscripcionExamenFinal.belongsTo(InscripcionMateria, {
+  as: "inscripcionMateria",
+  foreignKey: "id_inscripcion_materia",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
 HistorialInscripcionExamenFinal.belongsTo(Usuario, {
   as: "usuario",
   foreignKey: "realizado_por",
