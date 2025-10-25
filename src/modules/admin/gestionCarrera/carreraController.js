@@ -20,6 +20,7 @@ exports.listarCarreras = async (req, res, next) => {
           as: "planesEstudio",
           attributes: ["resolucion"],
           where: { vigente: 1 },
+          required: false,
         },
       ],
     });

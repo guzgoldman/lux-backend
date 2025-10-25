@@ -134,7 +134,16 @@ const registrarExamenFinal = async (req, res) => {
 
 const listarExamenesFinales = async (req, res) => {
   try {
+    const rolUsuario = req.user.rol;
+    let whereCondition = {};
+
+    // Si el usuario es profesor, filtrar solo los exámenes asignados a él
+    if (rolUsuario === "Profesor") {
+      whereCondition = { id_usuario_profesor: req.user.id };
+    }
+
     const examenesFinales = await ExamenFinal.findAll({
+      where: whereCondition,
       attributes: [
         "id",
         "id_materia_plan",
@@ -157,6 +166,13 @@ const listarExamenesFinales = async (req, res) => {
               model: PlanEstudio,
               as: "planEstudio",
               attributes: ["id", "resolucion"],
+              include: [
+                {
+                  model: Carrera,
+                  as: "carrera",
+                  attributes: ["nombre"],
+                },
+              ],
             },
           ],
         },
@@ -200,6 +216,11 @@ const listarExamenesFinales = async (req, res) => {
                 ? {
                     id: plain.materiaPlan.planEstudio.id,
                     resolucion: plain.materiaPlan.planEstudio.resolucion,
+                    carrera: plain.materiaPlan.planEstudio.carrera
+                      ? {
+                          nombre: plain.materiaPlan.planEstudio.carrera.nombre,
+                        }
+                      : null,
                   }
                 : null,
             }
@@ -370,6 +391,16 @@ const obtenerAlumnosInscriptos = async (req, res) => {
       ],
     });
 
+    // Obtener asistencias por separado
+    const asistencias = await AsistenciaExamenFinal.findAll({
+      where: { id_examen_final: id },
+    });
+
+    const asistenciasMap = asistencias.reduce((acc, asistencia) => {
+      acc[asistencia.id_usuario_alumno] = asistencia.estado;
+      return acc;
+    }, {});
+
     const alumnosFormateados = inscripciones.map((inscripcion) => ({
       id_inscripcion: inscripcion.id,
       id_usuario: inscripcion.alumno?.id,
@@ -379,6 +410,7 @@ const obtenerAlumnosInscriptos = async (req, res) => {
       fecha_inscripcion: inscripcion.fecha_inscripcion,
       calificacion: inscripcion.nota,
       estado: inscripcion.estado,
+      asistencia: asistenciasMap[inscripcion.alumno?.id] || null,
     }));
 
     res.status(200).json({
@@ -401,6 +433,7 @@ const registrarAsistencia = async (req, res) => {
     const { idExamen } = req.params;
     const { id_usuario_alumno, presente } = req.body;
     const realizado_por = req.user.id;
+    const userRole = req.user.rol;
 
     // Verificar que existe la inscripción
     const inscripcion = await InscripcionExamenFinal.findOne({
@@ -417,23 +450,39 @@ const registrarAsistencia = async (req, res) => {
       });
     }
 
-    // Buscar o crear registro de asistencia
-    const [asistencia, created] = await AsistenciaExamenFinal.findOrCreate({
+    // Buscar asistencia existente
+    const asistenciaExistente = await AsistenciaExamenFinal.findOne({
       where: {
         id_examen_final: idExamen,
         id_usuario_alumno,
       },
-      defaults: {
-        presente,
-        realizado_por,
-      },
     });
 
-    if (!created) {
-      // Si ya existe, actualizar
-      asistencia.presente = presente;
-      asistencia.realizado_por = realizado_por;
-      await asistencia.save();
+    // Si ya existe asistencia y el usuario no es Administrador, no puede modificarla
+    if (asistenciaExistente && userRole !== "Administrador") {
+      return res.status(403).json({
+        success: false,
+        message: "La asistencia ya fue registrada. Solo un administrador puede modificarla.",
+      });
+    }
+
+    let asistencia;
+    if (asistenciaExistente) {
+      // Actualizar (solo llega aquí si es admin)
+      asistenciaExistente.estado = presente ? "PRESENTE" : "AUSENTE";
+      asistenciaExistente.id_usuario_profesor_control = realizado_por;
+      asistenciaExistente.modificado_por = realizado_por;
+      await asistenciaExistente.save();
+      asistencia = asistenciaExistente;
+    } else {
+      // Crear nueva
+      asistencia = await AsistenciaExamenFinal.create({
+        id_examen_final: idExamen,
+        id_usuario_alumno,
+        estado: presente ? "PRESENTE" : "AUSENTE",
+        id_usuario_profesor_control: realizado_por,
+        creado_por: realizado_por,
+      });
     }
 
     res.status(200).json({
@@ -483,7 +532,9 @@ const obtenerCalificaciones = async (req, res) => {
     }, {});
 
     const calificaciones = inscripciones.map((inscripcion) => ({
-      id_inscripcion: inscripcion.id,
+      id_inscripcion: `${inscripcion.id_usuario_alumno}-${inscripcion.id_examen_final}`,
+      id_usuario_alumno: inscripcion.id_usuario_alumno,
+      id_examen_final: inscripcion.id_examen_final,
       alumno: {
         id: inscripcion.alumno?.id,
         nombre: inscripcion.alumno?.persona?.nombre,
@@ -515,6 +566,7 @@ const actualizarCalificacion = async (req, res) => {
     const { idInscripcion } = req.params;
     const { calificacion } = req.body;
     const userRole = req.user.rol;
+    const userId = req.user.id;
 
     // Validar que la calificación esté entre 0 y 10
     if (calificacion < 0 || calificacion > 10) {
@@ -524,11 +576,59 @@ const actualizarCalificacion = async (req, res) => {
       });
     }
 
-    const inscripcion = await InscripcionExamenFinal.findByPk(idInscripcion);
+    // Parsear el idInscripcion compuesto (formato: "id_usuario_alumno-id_examen_final")
+    const [id_usuario_alumno, id_examen_final] = idInscripcion.split('-').map(Number);
+
+    if (!id_usuario_alumno || !id_examen_final) {
+      return res.status(400).json({
+        success: false,
+        message: "ID de inscripción inválido",
+      });
+    }
+
+    const inscripcion = await InscripcionExamenFinal.findOne({
+      where: {
+        id_usuario_alumno,
+        id_examen_final,
+      },
+      include: [
+        {
+          model: ExamenFinal,
+          as: "examenFinal",
+          attributes: ["id_usuario_profesor", "id_materia_plan"],
+          include: [
+            {
+              model: MateriaPlan,
+              as: "materiaPlan",
+              include: [
+                {
+                  model: MateriaPlanCicloLectivo,
+                  as: "ciclos",
+                  attributes: ["tipo_aprobacion"],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: InscripcionMateria,
+          as: "inscripcionMateria",
+        },
+      ],
+    });
+
     if (!inscripcion) {
       return res.status(404).json({
         success: false,
         message: "Inscripción no encontrada",
+      });
+    }
+
+    // Verificar que el profesor que intenta calificar es el asignado al examen
+    if (userRole === "Profesor" && inscripcion.examenFinal.id_usuario_profesor !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Solo el profesor asignado a este examen puede calificar.",
       });
     }
 
@@ -543,8 +643,44 @@ const actualizarCalificacion = async (req, res) => {
 
     // Actualizar calificación
     inscripcion.nota = calificacion;
-    inscripcion.bloqueada = userRole !== "Administrador"; // Solo se mantiene desbloqueada si es admin
+    // Bloquear automáticamente cuando un profesor pone la nota
+    // Solo el admin puede dejarla desbloqueada
+    if (userRole === "Profesor") {
+      inscripcion.bloqueada = true;
+    }
+    inscripcion.modificado_por = userId;
     await inscripcion.save();
+
+    // Actualizar estado en inscripcion_materia según tipo de aprobación
+    if (inscripcion.inscripcionMateria) {
+      const tipoAprobacion = inscripcion.examenFinal?.materiaPlan?.ciclos?.[0]?.tipo_aprobacion;
+      let nuevoEstado = null;
+
+      if (tipoAprobacion) {
+        // EP (Exclusivamente Promocionable): 7 o más = Aprobada, menos de 7 = Desaprobada
+        // P (Promocionable): 7 o más = Aprobada, 4 a 6.99 = Regularizada, menos de 4 = Desaprobada
+        // NP (No Promocionable): 4 o más = Aprobada, menos de 4 = Desaprobada
+        if (tipoAprobacion === "EP") {
+          nuevoEstado = calificacion >= 7 ? "Aprobada" : "Desaprobada";
+        } else if (tipoAprobacion === "P") {
+          if (calificacion >= 7) {
+            nuevoEstado = "Aprobada";
+          } else if (calificacion >= 4) {
+            nuevoEstado = "Regularizada";
+          } else {
+            nuevoEstado = "Desaprobada";
+          }
+        } else if (tipoAprobacion === "NP") {
+          nuevoEstado = calificacion >= 4 ? "Aprobada" : "Desaprobada";
+        }
+
+        if (nuevoEstado) {
+          inscripcion.inscripcionMateria.estado = nuevoEstado;
+          inscripcion.inscripcionMateria.modificado_por = userId;
+          await inscripcion.inscripcionMateria.save();
+        }
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -651,8 +787,23 @@ const bloquearCalificacion = async (req, res) => {
       });
     }
 
+    // Parsear el idInscripcion compuesto (formato: "id_usuario_alumno-id_examen_final")
+    const [id_usuario_alumno, id_examen_final] = idInscripcion.split('-').map(Number);
+
+    if (!id_usuario_alumno || !id_examen_final) {
+      return res.status(400).json({
+        success: false,
+        message: "ID de inscripción inválido",
+      });
+    }
+
     // Buscar la inscripción
-    const inscripcion = await InscripcionExamenFinal.findByPk(idInscripcion);
+    const inscripcion = await InscripcionExamenFinal.findOne({
+      where: {
+        id_usuario_alumno,
+        id_examen_final,
+      },
+    });
 
     if (!inscripcion) {
       return res.status(404).json({
