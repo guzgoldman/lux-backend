@@ -484,6 +484,34 @@ exports.cancelarCambioDato = async (req, res, next) => {
   }
 };
 
+/**
+ * Obtener verificaciones pendientes del usuario
+ */
+exports.obtenerVerificacionesPendientes = async (req, res, next) => {
+  try {
+    const idUsuario = req.params.id || req.user.id;
+    const pendientes = {};
+
+    // Verificar para email
+    const emailData = await verificationService.getPendingVerificationData(idUsuario, 'email');
+    if (emailData) {
+      pendientes.email = emailData;
+    }
+
+    // Verificar para teléfono
+    const telefonoData = await verificationService.getPendingVerificationData(idUsuario, 'telefono');
+    if (telefonoData) {
+      pendientes.telefono = telefonoData;
+    }
+
+    res.json({ pendientes });
+
+  } catch (error) {
+    console.error('[ERROR] Error al obtener verificaciones pendientes:', error);
+    next(error);
+  }
+};
+
 exports.actualizarPassword = async (req, res, next) => {
   try {
     const { actual, nueva } = req.body;

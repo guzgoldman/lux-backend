@@ -102,6 +102,30 @@ class VerificationService {
     const key = `verification:${userId}:${field}`;
     return await redisClient.ttl(key);
   }
+
+  /**
+   * Obtiene los datos de una verificación pendiente (sin el código)
+   * @param {number} userId - ID del usuario
+   * @param {string} field - Campo a verificar
+   * @returns {Promise<object|null>} - { newValue, timeRemaining } o null si no existe
+   */
+  async getPendingVerificationData(userId, field) {
+    const key = `verification:${userId}:${field}`;
+    const data = await redisClient.get(key);
+
+    if (!data) {
+      return null;
+    }
+
+    const parsed = JSON.parse(data);
+    const timeRemaining = await redisClient.ttl(key);
+
+    return {
+      newValue: parsed.newValue,
+      timeRemaining: timeRemaining > 0 ? timeRemaining : 0,
+      createdAt: parsed.createdAt
+    };
+  }
 }
 
 module.exports = new VerificationService();

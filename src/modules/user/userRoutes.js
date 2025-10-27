@@ -11,7 +11,8 @@ const {
   obtenerIdPersona,
   solicitarCambioDato,
   verificarCambioDato,
-  cancelarCambioDato
+  cancelarCambioDato,
+  obtenerVerificacionesPendientes
 } = require("./userController");
 const { verifyToken, requireRole } = require("../../middlewares/auth");
 
@@ -30,6 +31,7 @@ router.put("/:id/actualizar-password", verifyToken, actualizarPassword);
 router.post("/:id/solicitar-cambio-dato", verifyToken, solicitarCambioDato);
 router.post("/:id/verificar-cambio-dato", verifyToken, verificarCambioDato);
 router.post("/:id/cancelar-cambio-dato", verifyToken, cancelarCambioDato);
+router.get("/:id/verificaciones-pendientes", verifyToken, obtenerVerificacionesPendientes);
 
 router.get("/obtener-id-persona", verifyToken, obtenerIdPersona);
 
