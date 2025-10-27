@@ -1,6 +1,18 @@
 const express = require("express");
 const router = express.Router();
-const { perfil, mostrarDatosPersonales, actualizarDatosPersonales, actualizarPassword, listarAlumnos, listarCarreras, buscarAlumnos, obtenerIdPersona } = require("./userController");
+const { 
+  perfil, 
+  mostrarDatosPersonales, 
+  actualizarDatosPersonales, 
+  actualizarPassword, 
+  listarAlumnos, 
+  listarCarreras, 
+  buscarAlumnos, 
+  obtenerIdPersona,
+  solicitarCambioDato,
+  verificarCambioDato,
+  cancelarCambioDato
+} = require("./userController");
 const { verifyToken, requireRole } = require("../../middlewares/auth");
 
 router.get("/perfil", verifyToken, perfil);
@@ -13,6 +25,11 @@ router.get("/buscar-alumnos", verifyToken, requireRole("Administrador"), buscarA
 router.get("/:id/datos-personales", verifyToken, mostrarDatosPersonales);
 router.put("/:id/actualizar-datos-personales", verifyToken, actualizarDatosPersonales);
 router.put("/:id/actualizar-password", verifyToken, actualizarPassword);
+
+// Nuevas rutas para verificación de cambios
+router.post("/:id/solicitar-cambio-dato", verifyToken, solicitarCambioDato);
+router.post("/:id/verificar-cambio-dato", verifyToken, verificarCambioDato);
+router.post("/:id/cancelar-cambio-dato", verifyToken, cancelarCambioDato);
 
 router.get("/obtener-id-persona", verifyToken, obtenerIdPersona);
 

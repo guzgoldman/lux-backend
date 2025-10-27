@@ -16,6 +16,11 @@ const {
 } = require("../../models");
 const bcrypt = require("bcrypt");
 const { Op } = require("sequelize");
+const verificationService = require("../../services/verificationService");
+const { enviarCorreo } = require("../../lib/mailer");
+const fs = require("fs");
+const path = require("path");
+const handlebars = require("handlebars");
 
 exports.perfil = async (req, res, next) => {
   try {
@@ -255,38 +260,250 @@ exports.actualizarDatosPersonales = async (req, res, next) => {
     if (!usuario) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
+
+    // Verificar si el usuario está intentando cambiar email o teléfono
+    const emailCambiado = email && email !== usuario.persona.email;
+    const telefonoCambiado = telefono && telefono !== usuario.persona.telefono;
+
+    if (emailCambiado || telefonoCambiado) {
+      return res.status(400).json({ 
+        message: "Para cambiar email o teléfono, usa el endpoint de solicitud de verificación",
+        requiresVerification: true
+      });
+    }
+
+    // Si no hay cambios en email ni teléfono, actualizar normalmente
     await usuario.persona.update({
-      email,
-      telefono,
+      email: email || usuario.persona.email,
+      telefono: telefono || usuario.persona.telefono,
     });
+    
     res.json({
       message: "Datos actualizados correctamente",
     });
   } catch (error) {
-    res.status(500).json({ message: "Error interno del servidor" });
+    next(error);
+  }
+};
+
+/**
+ * Solicitar cambio de email o teléfono
+ * Genera un código y lo envía al email actual
+ */
+exports.solicitarCambioDato = async (req, res, next) => {
+  try {
+    const idUsuario = req.params.id || req.user.id;
+    const { campo, nuevoValor } = req.body;
+
+    // Validar campo
+    if (!['email', 'telefono'].includes(campo)) {
+      return res.status(400).json({ 
+        message: "Campo inválido. Debe ser 'email' o 'telefono'" 
+      });
+    }
+
+    // Validar que se proporcione el nuevo valor
+    if (!nuevoValor || nuevoValor.trim() === '') {
+      return res.status(400).json({ 
+        message: "Debe proporcionar el nuevo valor" 
+      });
+    }
+
+    // Buscar usuario
+    const usuario = await Usuario.findByPk(idUsuario, {
+      include: [{ model: Persona, as: "persona" }],
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    // Verificar que el nuevo valor sea diferente al actual
+    if (usuario.persona[campo] === nuevoValor.trim()) {
+      return res.status(400).json({ 
+        message: `El nuevo ${campo} es igual al actual` 
+      });
+    }
+
+    // Verificar si ya existe una solicitud pendiente
+    const hasPending = await verificationService.hasPendingRequest(idUsuario, campo);
+    if (hasPending) {
+      const timeRemaining = await verificationService.getTimeRemaining(idUsuario, campo);
+      return res.status(429).json({ 
+        message: "Ya existe una solicitud pendiente. Espera a que expire o usa el código enviado.",
+        timeRemaining: timeRemaining > 0 ? timeRemaining : 0
+      });
+    }
+
+    const expirationMinutes = 15;
+    const code = await verificationService.createVerificationRequest(
+      idUsuario,
+      campo,
+      nuevoValor.trim(),
+      usuario.persona.email,
+      expirationMinutes
+    );
+
+    // Leer y compilar la plantilla de email
+    const templatePath = path.join(__dirname, '../../templates/verificacion_cambio.hbs');
+    const templateSource = fs.readFileSync(templatePath, 'utf-8');
+    const template = handlebars.compile(templateSource);
+
+    const fieldNameMap = {
+      email: 'correo electrónico',
+      telefono: 'teléfono'
+    };
+
+    const html = template({
+      fieldName: fieldNameMap[campo],
+      newValue: nuevoValor.trim(),
+      code,
+      expirationMinutes
+    });
+
+    // Enviar email
+    await enviarCorreo({
+      to: usuario.persona.email,
+      subject: `Verificación de cambio de ${fieldNameMap[campo]}`,
+      html
+    });
+
+    res.json({ 
+      message: `Código de verificación enviado a ${usuario.persona.email}`,
+      expiresIn: expirationMinutes * 60 // segundos
+    });
+
+  } catch (error) {
+    console.error('[ERROR] Error al solicitar cambio:', error);
+    next(error);
+  }
+};
+
+/**
+ * Verificar código y aplicar cambio
+ */
+exports.verificarCambioDato = async (req, res, next) => {
+  try {
+    const idUsuario = req.params.id || req.user.id;
+    const { campo, codigo } = req.body;
+
+    // Validar campo
+    if (!['email', 'telefono'].includes(campo)) {
+      return res.status(400).json({ 
+        message: "Campo inválido. Debe ser 'email' o 'telefono'" 
+      });
+    }
+
+    // Validar código
+    if (!codigo || codigo.trim() === '') {
+      return res.status(400).json({ 
+        message: "Debe proporcionar el código de verificación" 
+      });
+    }
+
+    // Verificar código
+    const verificationData = await verificationService.verifyCode(
+      idUsuario, 
+      campo, 
+      codigo.trim()
+    );
+
+    if (!verificationData) {
+      return res.status(400).json({ 
+        message: "Código inválido o expirado" 
+      });
+    }
+
+    // Buscar usuario
+    const usuario = await Usuario.findByPk(idUsuario, {
+      include: [{ model: Persona, as: "persona" }],
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    // Aplicar el cambio
+    await usuario.persona.update({
+      [campo]: verificationData.newValue
+    });
+
+    // Eliminar la solicitud de verificación
+    await verificationService.deleteVerificationRequest(idUsuario, campo);
+
+    const fieldNameMap = {
+      email: 'correo electrónico',
+      telefono: 'teléfono'
+    };
+
+    res.json({ 
+      message: `${fieldNameMap[campo]} actualizado correctamente`,
+      newValue: verificationData.newValue
+    });
+
+  } catch (error) {
+    console.error('[ERROR] Error al verificar cambio:', error);
+    next(error);
+  }
+};
+
+/**
+ * Cancelar solicitud de cambio pendiente
+ */
+exports.cancelarCambioDato = async (req, res, next) => {
+  try {
+    const idUsuario = req.params.id || req.user.id;
+    const { campo } = req.body;
+
+    // Validar campo
+    if (!['email', 'telefono'].includes(campo)) {
+      return res.status(400).json({ 
+        message: "Campo inválido. Debe ser 'email' o 'telefono'" 
+      });
+    }
+
+    // Verificar si existe una solicitud pendiente
+    const hasPending = await verificationService.hasPendingRequest(idUsuario, campo);
+    
+    if (!hasPending) {
+      return res.status(404).json({ 
+        message: "No hay ninguna solicitud pendiente para este campo" 
+      });
+    }
+
+    // Eliminar la solicitud
+    await verificationService.deleteVerificationRequest(idUsuario, campo);
+
+    res.json({ 
+      message: "Solicitud de cambio cancelada correctamente" 
+    });
+
+  } catch (error) {
+    console.error('[ERROR] Error al cancelar cambio:', error);
+    next(error);
   }
 };
 
 exports.actualizarPassword = async (req, res, next) => {
   try {
-    const { passwordActual, nuevoPassword } = req.body;
+    const { actual, nueva } = req.body;
     const idUsuario = req.params.id || req.user.id;
     const usuario = await Usuario.findByPk(idUsuario);
     if (!usuario) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
     const passwordMatch = await bcrypt.compare(
-      passwordActual,
+      actual,
       usuario.password
     );
     if (!passwordMatch) {
-      return res.status(400).json({ message: "Password actual incorrecto" });
+      return res.status(400).json({ message: "Contraseña actual incorrecta" });
     }
-    const hashedPassword = await bcrypt.hash(nuevoPassword, 10);
+    const hashedPassword = await bcrypt.hash(nueva, 10);
     await usuario.update({ password: hashedPassword });
-    res.json({ message: "Password actualizado correctamente" });
+    res.json({ message: "Contraseña actualizada correctamente" });
   } catch (error) {
-    res.status(500).json({ message: "Error interno del servidor" });
+    next(error);
   }
 };
 
@@ -451,13 +668,18 @@ exports.listarAlumnos = async (req, res, next) => {
     const carreraInclude = {
       model: AlumnoCarrera,
       as: "carreras",
-      attributes: ["fecha_inscripcion", "activo"],
+      attributes: ["fecha_inscripcion", "activo", "id_plan_estudio_asignado"],
       include: [
         {
           model: Carrera,
           as: "carrera",
           attributes: ["id", "nombre"],
         },
+        {
+          model: PlanEstudio,
+          as: "planEstudio",
+          attributes: ["id", "resolucion"],
+        }
       ],
       required: false, // LEFT JOIN para no excluir usuarios sin carreras
     };
@@ -528,6 +750,7 @@ exports.listarAlumnos = async (req, res, next) => {
           },
           fechaInscripcion: carreraActiva?.fecha_inscripcion || null,
           activo: carreraActiva?.activo === 1,
+          resolucionPlanAsignado: carreraActiva?.planEstudio?.resolucion || null,
         };
       })
       .filter((alumno) => alumno !== null); // Filtrar elementos nulos

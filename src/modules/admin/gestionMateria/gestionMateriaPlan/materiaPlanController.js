@@ -1,4 +1,4 @@
-const { Materia, MateriaPlan, PlanEstudio } = require("../../../../models");
+const { Materia, MateriaPlan, PlanEstudio, Carrera } = require("../../../../models");
 
 exports.registrarMateriaPlan = async (req, res, next) => {
   const { planEstudioId } = req.params;
@@ -21,6 +21,11 @@ exports.registrarMateriaPlan = async (req, res, next) => {
 
 exports.listarMateriasPlan = async (req, res, next) => {
   try {
+    const { soloNoVigentes } = req.query;
+    
+    // Configurar el filtro de vigencia según el parámetro
+    const planEstudioWhere = soloNoVigentes === 'true' ? { vigente: 0 } : {};
+
     const materiasPlan = await MateriaPlan.findAll({
       include: [
         {
@@ -30,7 +35,18 @@ exports.listarMateriasPlan = async (req, res, next) => {
         {
           model: PlanEstudio,
           as: "planEstudio",
+          where: planEstudioWhere,
+          include: [
+            {
+              model: Carrera,
+              as: "carrera",
+            },
+          ],
         },
+      ],
+      order: [
+        [{ model: PlanEstudio, as: "planEstudio" }, "resolucion", "DESC"],
+        [{ model: Materia, as: "materia" }, "nombre", "ASC"],
       ],
     });
     res.status(200).json(materiasPlan);
