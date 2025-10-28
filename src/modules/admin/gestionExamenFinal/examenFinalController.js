@@ -8,6 +8,7 @@ const {
   InscripcionMateria,
   HistorialAsistenciaExamenFinal,
   HistorialInscripcionExamenFinal,
+  HistorialInscripcionMateria,
   ProfesorMateria,
   Persona,
   Usuario,
@@ -604,7 +605,7 @@ const actualizarCalificacion = async (req, res) => {
                 {
                   model: MateriaPlanCicloLectivo,
                   as: "ciclos",
-                  attributes: ["tipo_aprobacion"],
+                  attributes: ["tipo_aprobacion", "id"],
                 },
               ],
             },
@@ -641,19 +642,47 @@ const actualizarCalificacion = async (req, res) => {
       });
     }
 
-    // Actualizar calificación
+    // Guardar datos previos para el historial
+    const datosPreviosInscripcionExamen = {
+      nota: inscripcion.nota,
+      bloqueada: inscripcion.bloqueada,
+    };
+
+    const datosPreviosInscripcionMateria = inscripcion.inscripcionMateria ? {
+      estado: inscripcion.inscripcionMateria.estado,
+      nota_final: inscripcion.inscripcionMateria.nota_final,
+      fecha_finalizacion: inscripcion.inscripcionMateria.fecha_finalizacion,
+      origen_aprobacion: inscripcion.inscripcionMateria.origen_aprobacion,
+    } : null;
+
+    // Determinar si es la primera vez que se pone nota (para bloqueo automático)
+    const esPrimeraVez = inscripcion.nota === null || inscripcion.nota === undefined;
+
+    // Actualizar calificación en InscripcionExamenFinal
     inscripcion.nota = calificacion;
-    // Bloquear automáticamente cuando un profesor pone la nota
-    // Solo el admin puede dejarla desbloqueada
-    if (userRole === "Profesor") {
+    
+    // Bloquear automáticamente cuando un profesor pone la nota por primera vez
+    if (userRole === "Profesor" && esPrimeraVez) {
       inscripcion.bloqueada = true;
     }
+    
     inscripcion.modificado_por = userId;
     await inscripcion.save();
+
+    // Registrar en historial de inscripcion_examen_final
+    await HistorialInscripcionExamenFinal.create({
+      id_usuario_alumno,
+      id_examen_final,
+      accion: esPrimeraVez ? "CREAR_NOTA" : "MODIFICAR",
+      datos_previos: JSON.stringify(datosPreviosInscripcionExamen),
+      realizado_por: userId,
+      comentario: `Calificación ${esPrimeraVez ? 'creada' : 'modificada'} a ${calificacion} por ${userRole}`,
+    });
 
     // Actualizar estado en inscripcion_materia según tipo de aprobación
     if (inscripcion.inscripcionMateria) {
       const tipoAprobacion = inscripcion.examenFinal?.materiaPlan?.ciclos?.[0]?.tipo_aprobacion;
+      const idMateriaPlanCicloLectivo = inscripcion.examenFinal?.materiaPlan?.ciclos?.[0]?.id;
       let nuevoEstado = null;
 
       if (tipoAprobacion) {
@@ -674,6 +703,8 @@ const actualizarCalificacion = async (req, res) => {
           nuevoEstado = calificacion >= 4 ? "Aprobada" : "Desaprobada";
         }
 
+        const estadoCambio = datosPreviosInscripcionMateria?.estado !== nuevoEstado;
+
         if (nuevoEstado) {
           inscripcion.inscripcionMateria.estado = nuevoEstado;
           inscripcion.inscripcionMateria.modificado_por = userId;
@@ -683,11 +714,30 @@ const actualizarCalificacion = async (req, res) => {
             inscripcion.inscripcionMateria.nota_final = calificacion;
             inscripcion.inscripcionMateria.fecha_finalizacion = new Date();
             inscripcion.inscripcionMateria.origen_aprobacion = "Final";
-            // Crear el ID compuesto para el examen final aprobatorio
             inscripcion.inscripcionMateria.id_inscripcion_examen_final_aprobatorio = id_examen_final;
+          } else {
+            // Si cambió de Aprobada a otro estado, limpiar los campos
+            if (datosPreviosInscripcionMateria?.estado === "Aprobada") {
+              inscripcion.inscripcionMateria.nota_final = null;
+              inscripcion.inscripcionMateria.fecha_finalizacion = null;
+              inscripcion.inscripcionMateria.origen_aprobacion = null;
+              inscripcion.inscripcionMateria.id_inscripcion_examen_final_aprobatorio = null;
+            }
           }
           
           await inscripcion.inscripcionMateria.save();
+
+          // Registrar en historial de inscripcion_materia solo si hubo cambio de estado
+          if (estadoCambio || esPrimeraVez) {
+            await HistorialInscripcionMateria.create({
+              id_usuario_alumno,
+              id_materia_plan_ciclo_lectivo: idMateriaPlanCicloLectivo,
+              accion: "MODIFICAR",
+              datos_previos: JSON.stringify(datosPreviosInscripcionMateria),
+              realizado_por: userId,
+              comentario: `Estado cambiado de ${datosPreviosInscripcionMateria?.estado || 'N/A'} a ${nuevoEstado} por calificación de examen final (nota: ${calificacion})`,
+            });
+          }
         }
       }
     }

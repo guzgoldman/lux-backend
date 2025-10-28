@@ -90,6 +90,7 @@ exports.getMateriasPorCarrera = async (req, res) => {
           model: MateriaPlanCicloLectivo,
           as: "ciclo",
           required: true,
+          attributes: ["id", "ciclo_lectivo", "tipo_aprobacion"],
           include: [
             {
               model: MateriaPlan,
@@ -137,7 +138,7 @@ exports.getMateriasPorCarrera = async (req, res) => {
       nombre: item.ciclo?.materiaPlan?.materia?.nombre ?? "",
       estado: item.estado,
       nota: item.nota_final,
-      anio: item.ciclo?.anio ?? null,
+      anio: item.ciclo?.ciclo_lectivo ?? null,
       profesor: item.ciclo?.profesores?.length
         ? item.ciclo.profesores
             .map(
@@ -165,6 +166,44 @@ exports.registrarInscripcionMateria = async (req, res) => {
   const { idMateriaPlanCicloLectivo } = req.params;
 
   try {
+    // Verificar que la materia existe y obtener su fecha de cierre
+    const materiaPlanCiclo = await MateriaPlanCicloLectivo.findByPk(
+      idMateriaPlanCicloLectivo,
+      {
+        attributes: ["id", "fecha_cierre", "fecha_inicio"],
+      }
+    );
+
+    if (!materiaPlanCiclo) {
+      return res.status(404).json({ 
+        error: "La materia especificada no existe" 
+      });
+    }
+
+    const fechaActual = new Date();
+
+    // Verificar si la fecha de cierre ya pasó (solo si existe y no es null)
+    if (materiaPlanCiclo.fecha_cierre !== null && materiaPlanCiclo.fecha_cierre !== undefined) {
+      const fechaCierre = new Date(materiaPlanCiclo.fecha_cierre);
+
+      if (fechaActual > fechaCierre) {
+        return res.status(400).json({ 
+          error: "El periodo de inscripción para esta materia ha finalizado" 
+        });
+      }
+    }
+
+    // Verificar si la fecha de inicio aún no ha llegado (solo si existe y no es null)
+    if (materiaPlanCiclo.fecha_inicio !== null && materiaPlanCiclo.fecha_inicio !== undefined) {
+      const fechaInicio = new Date(materiaPlanCiclo.fecha_inicio);
+      
+      if (fechaActual < fechaInicio) {
+        return res.status(400).json({ 
+          error: "El periodo de inscripción para esta materia aún no ha comenzado" 
+        });
+      }
+    }
+
     await InscripcionMateria.create({
       id_usuario_alumno: idAlumno,
       id_materia_plan_ciclo_lectivo: idMateriaPlanCicloLectivo,
@@ -175,8 +214,11 @@ exports.registrarInscripcionMateria = async (req, res) => {
       .status(201)
       .json({ message: "Inscripción registrada con éxito" });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Error al registrar la inscripción" });
+    console.error("Error al registrar inscripción:", error);
+    return res.status(500).json({ 
+      error: "Error al registrar la inscripción",
+      details: error.message 
+    });
   }
 };
 
@@ -186,7 +228,7 @@ exports.verificarEstadoInscripcionMaterias = async (req, res) => {
   const currentYear = new Date().getFullYear();
 
   try {
-    // 1. Obtener todas las materias del plan del ciclo lectivo actual, incluyendo el nombre de la materia
+    // 1. Obtener todas las materias del plan del ciclo lectivo actual, incluyendo el nombre de la materia y fechas
     const materiasPlan = await MateriaPlan.findAll({
       where: { id_plan_estudio: planId },
       attributes: ["id"],
@@ -200,7 +242,7 @@ exports.verificarEstadoInscripcionMaterias = async (req, res) => {
           model: MateriaPlanCicloLectivo,
           as: "ciclos",
           where: { ciclo_lectivo: currentYear },
-          attributes: ["id"],
+          attributes: ["id", "fecha_inicio", "fecha_cierre"],
           required: true,
         },
       ],
@@ -307,16 +349,20 @@ exports.verificarEstadoInscripcionMaterias = async (req, res) => {
       });
     });
 
-    // 6. Verificar estado de cada materia (añadimos nombre de la materia principal)
+    // 6. Verificar estado de cada materia (añadimos nombre de la materia principal y validación de fechas)
+    const fechaActual = new Date();
+    
     const estadoMaterias = materiasPlan.map((materiaPlan) => {
       const idMateriaPlan = materiaPlan.id;
-      const idMateriaPlanCicloLectivo =
-        materiaPlan.ciclos && materiaPlan.ciclos[0]
-          ? materiaPlan.ciclos[0].id
-          : null;
+      const cicloLectivo = materiaPlan.ciclos && materiaPlan.ciclos[0];
+      const idMateriaPlanCicloLectivo = cicloLectivo ? cicloLectivo.id : null;
 
       // Nombre de la materia (si fue incluido)
       const nombreMateria = materiaPlan.materia?.nombre || null;
+
+      // Obtener fechas
+      const fechaInicio = cicloLectivo?.fecha_inicio ? new Date(cicloLectivo.fecha_inicio) : null;
+      const fechaCierre = cicloLectivo?.fecha_cierre ? new Date(cicloLectivo.fecha_cierre) : null;
 
       // Verificar si ya está inscripto
       const yaInscripto = materiasInscriptasMap.has(idMateriaPlan);
@@ -344,6 +390,12 @@ exports.verificarEstadoInscripcionMaterias = async (req, res) => {
       } else if (!correlativasCumplidas) {
         puedeInscribirse = false;
         razonBloqueo = "Correlativas no cumplidas";
+      } else if (fechaCierre && fechaActual > fechaCierre) {
+        puedeInscribirse = false;
+        razonBloqueo = "Periodo de inscripción finalizado";
+      } else if (fechaInicio && fechaActual < fechaInicio) {
+        puedeInscribirse = false;
+        razonBloqueo = "Periodo de inscripción aún no ha comenzado";
       }
 
       return {
@@ -381,10 +433,12 @@ exports.verificarEstadoInscripcionMaterias = async (req, res) => {
         "Ya inscripto en esta materia": 1,
         "Materia ya aprobada": 2,
         "Correlativas no cumplidas": 3,
+        "Periodo de inscripción finalizado": 4,
+        "Periodo de inscripción aún no ha comenzado": 5,
       };
       return (
-        (ordenPrioridad[a.razonBloqueo] || 4) -
-        (ordenPrioridad[b.razonBloqueo] || 4)
+        (ordenPrioridad[a.razonBloqueo] || 6) -
+        (ordenPrioridad[b.razonBloqueo] || 6)
       );
     });
 
