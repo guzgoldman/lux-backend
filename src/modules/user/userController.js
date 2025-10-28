@@ -95,12 +95,24 @@ exports.perfil = async (req, res, next) => {
                 {
                   model: MateriaPlan,
                   as: "materiaPlan",
-                  attributes: ["id", "id_materia"],
+                  attributes: ["id", "id_materia", "anio_carrera"],
                   include: [
                     {
                       model: Materia,
                       as: "materia",
                       attributes: ["id", "nombre"],
+                    },
+                    {
+                      model: PlanEstudio,
+                      as: "planEstudio",
+                      attributes: ["id"],
+                      include: [
+                        {
+                          model: Carrera,
+                          as: "carrera",
+                          attributes: ["id", "nombre"],
+                        },
+                      ],
                     },
                   ],
                 },
@@ -217,6 +229,13 @@ exports.perfil = async (req, res, next) => {
         nota: i.nota_final,
       })),
       promedioGeneral: promedio.toFixed(1),
+      // Agregar inscripciones con año de carrera para certificados
+      inscripcionesActuales: usuario.inscripciones.map((i) => ({
+        estado: i.estado,
+        anio_carrera: i.ciclo?.materiaPlan?.anio_carrera || 0,
+        materia: i.ciclo?.materiaPlan?.materia?.nombre || "",
+        carrera: i.ciclo?.materiaPlan?.planEstudio?.carrera?.nombre || "",
+      })),
     });
   } catch (err) {
     next(err);

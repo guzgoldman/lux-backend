@@ -677,6 +677,16 @@ const actualizarCalificacion = async (req, res) => {
         if (nuevoEstado) {
           inscripcion.inscripcionMateria.estado = nuevoEstado;
           inscripcion.inscripcionMateria.modificado_por = userId;
+          
+          // Si el estado es "Aprobada", actualizar campos adicionales
+          if (nuevoEstado === "Aprobada") {
+            inscripcion.inscripcionMateria.nota_final = calificacion;
+            inscripcion.inscripcionMateria.fecha_finalizacion = new Date();
+            inscripcion.inscripcionMateria.origen_aprobacion = "Final";
+            // Crear el ID compuesto para el examen final aprobatorio
+            inscripcion.inscripcionMateria.id_inscripcion_examen_final_aprobatorio = id_examen_final;
+          }
+          
           await inscripcion.inscripcionMateria.save();
         }
       }

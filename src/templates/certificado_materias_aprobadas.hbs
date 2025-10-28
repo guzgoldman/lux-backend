@@ -1,0 +1,112 @@
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Constancia de Materias Aprobadas</title>
+    <style>
+      @page { size: A4; margin: 12mm; } * { box-sizing: border-box; } body {
+      font-family: "Times New Roman", serif; font-size: 11pt; color: #111; }
+      header { display: flex; align-items: center; gap: 16px; border-bottom: 1px
+      solid #222; padding-bottom: 8px; margin-bottom: 12px; } header img.logo {
+      width: 128px; height: auto; } header .info { line-height: 1.15; font-size:
+      10pt; } h1 { text-align: center; margin: 18px 0 10px; font-size: 16pt;
+      letter-spacing: .5px; text-transform: uppercase; } .cuerpo { text-align:
+      justify; line-height: 1.4; margin-bottom: 12px; } table { width: 100%;
+      border-collapse: collapse; margin: 12px 0; font-size: 9.5pt; } table th {
+      background-color: #f0f0f0; border: 1px solid #000; padding: 6px 4px;
+      text-align: center; font-weight: bold; } table td { border: 1px solid
+      #000; padding: 4px 6px; text-align: left; } table td.centro { text-align:
+      center; } .firma { margin-top: 28mm; display: flex; justify-content:
+      center; } .firma .linea { border-top: 1px solid #000; width: 70mm;
+      text-align: center; padding-top: 4px; font-size: 10pt; } .pie {
+      margin-top: 12mm; border-top: 1px solid #222; padding-top: 8px; font-size:
+      10pt; line-height: 1.25; text-align: center; } .resalt { font-weight:
+      bold; } .subtle { opacity: 0.9; } .nota-pie { font-size: 9pt; margin-top:
+      8px; line-height: 1.3; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <img class="logo" src="data:image/png;base64,{{logoBase64}}" alt="Logo" />
+      <div class="info">
+        <div class="resalt">Instituto Superior Nuestra Señora de Luján del Buen
+          Viaje</div>
+        <div class="subtle">DIEGEP 4283 – Ruta 8 Nº 6725 (1657) Loma Hermosa -
+          San Martín - TE 5263-2395</div>
+        <div class="subtle">{{contacto}}</div>
+      </div>
+    </header>
+
+    <h1>Constancia de Materias Aprobadas</h1>
+
+    <div class="cuerpo">
+      <p>El <span class="resalt">Instituto Superior Nuestra Señora de Luján del
+          Buen Viaje (DIEGEP 4283 - Distrito Gral. San Martín)</span>
+        certifica que
+        <span class="resalt">{{apellido}}, {{nombre}}</span>
+        con D.N.I.
+        <span class="resalt">{{dni}}</span>
+        ha aprobado las materias detalladas a continuación correspondientes a la
+        carrera
+        {{#each carreras}}
+          <span class="resalt">{{this}}</span>
+        {{/each}}
+      </p>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 50px;">CURSO</th>
+          <th>MATERIA</th>
+          <th style="width: 120px;">FECHA DE<br />APROBACIÓN</th>
+          <th colspan="2" style="width: 140px;">CALIFICACIÓN</th>
+        </tr>
+        <tr>
+          <th colspan="3"></th>
+          <th style="width: 70px;">En Nros</th>
+          <th style="width: 70px;">En letras</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each materias}}
+          <tr>
+            <td class="centro">{{this.anio}}</td>
+            <td>{{this.nombre}}</td>
+            <td class="centro">{{this.fechaAprobacion}}</td>
+            <td class="centro">{{this.notaNumero}}</td>
+            <td class="centro">{{this.notaLetras}}</td>
+          </tr>
+        {{/each}}
+      </tbody>
+    </table>
+
+    <div class="nota-pie">
+      <p>El alumno tiene aprobado a la fecha el
+        {{porcentajeAprobado}}% del total de las materias de la Tecnicatura
+        Superior en
+        {{carreraPrincipal}}. Se adjunta plan de estudio.</p>
+
+      <p>Se expide la presente a pedido del interesado para ser presentado ante
+        las autoridades que correspondan en Loma Hermosa a los
+        <span class="resalt">{{dia}}</span>
+        días del mes de
+        <span class="resalt">{{mes}}</span>
+        del año
+        <span class="resalt">{{anio}}</span>.</p>
+    </div>
+
+    <div class="firma">
+      <div class="linea">
+        Firma y sello aclaratorio<br />de Secretaría
+      </div>
+    </div>
+
+    <div class="pie">
+      {{sitio}}
+      —
+      {{email}}
+    </div>
+  </body>
+</html>

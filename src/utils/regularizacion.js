@@ -81,9 +81,9 @@ class RegularizacionUtils {
       let nuevoEstado;
 
       if (tipoAprobacion === "EP") {
-        // Exclusivamente Promocionable: 7+ aprobada, <7 desaprobada (no se puede regularizar)
+        // Exclusivamente Promocionable: 7+ regularizada (debe pasar por examen final), <7 desaprobada
         if (promedio >= 7) {
-          nuevoEstado = "aprobada";
+          nuevoEstado = "regularizada";
         } else {
           nuevoEstado = "desaprobada";
         }

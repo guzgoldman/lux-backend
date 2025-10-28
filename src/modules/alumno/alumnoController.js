@@ -84,7 +84,6 @@ exports.getMateriasPorCarrera = async (req, res) => {
     const materiasInscriptas = await InscripcionMateria.findAll({
       where: {
         id_usuario_alumno: idAlumnoBuscado,
-        estado: { [Op.in]: ["Cursando", "Regularizada", "Aprobada"] },
       },
       include: [
         {

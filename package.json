@@ -26,6 +26,7 @@
     "morgan": "^1.10.0",
     "mysql2": "^3.14.1",
     "nodemailer": "^7.0.6",
+    "pdf-lib": "^1.17.1",
     "puppeteer": "^24.17.1",
     "sequelize": "^6.37.7"
   },

@@ -1,6 +1,7 @@
 const express = require("express");
 const dayjs = require("dayjs");
 require("dayjs/locale/es");
+const { PDFDocument } = require("pdf-lib");
 const {
   generarConstanciaAlumnoRegular,
   renderConstanciaHTML,
@@ -8,6 +9,8 @@ const {
   renderCertificadoMateriasAprobadasHTML,
   generarCertificadoAsistenciaExamen,
   renderCertificadoAsistenciaExamenHTML,
+  generarPlanEstudiosCompleto,
+  renderPlanEstudiosCompletoHTML,
 } = require("./pdf.service");
 const { verifyToken } = require("../middlewares/auth");
 const {
@@ -207,6 +210,47 @@ async function procesarCertificadoAlumnoRegular(
         nombre: c.carrera?.nombre,
         resolucion: c.carrera?.planesEstudio?.[0]?.resolucion ?? "—",
       }));
+
+      // Obtener inscripciones para calcular el año del alumno
+      const inscripciones = await InscripcionMateria.findAll({
+        where: {
+          id_usuario_alumno: alumno.id,
+          estado: { [Op.in]: ["REGULAR", "APROBADA", "CURSANDO"] },
+        },
+        include: [
+          {
+            model: MateriaPlanCicloLectivo,
+            as: "ciclo",
+            include: [
+              {
+                model: MateriaPlan,
+                as: "materiaPlan",
+                attributes: ["anio_carrera"],
+              },
+            ],
+          },
+        ],
+      });
+
+      // Encontrar el año más alto
+      let anioMasAlto = 0;
+      inscripciones.forEach((inscripcion) => {
+        const anio = inscripcion.ciclo?.materiaPlan?.anio_carrera || 0;
+        if (anio > anioMasAlto) {
+          anioMasAlto = anio;
+        }
+      });
+
+      // Convertir número de año a texto
+      const aniosTexto = {
+        1: "primer año",
+        2: "segundo año",
+        3: "tercer año",
+        4: "cuarto año",
+        5: "quinto año",
+      };
+
+      var anioAlumno = aniosTexto[anioMasAlto] || "";
     } else {
       // Para alumnos manuales, usar datos proporcionados o genéricos
       carrerasInfo = [
@@ -215,6 +259,7 @@ async function procesarCertificadoAlumnoRegular(
           resolucion: alumno.resolucion || "—",
         },
       ];
+      var anioAlumno = "";
     }
 
     const data = {
@@ -222,6 +267,7 @@ async function procesarCertificadoAlumnoRegular(
       apellido: alumno.persona.apellido,
       dni: alumno.persona.dni,
       carreras: carrerasInfo,
+      anioAlumno: anioAlumno,
       contacto,
       sitio,
       email,
@@ -270,6 +316,9 @@ async function procesarCertificadoMateriasAprobadas(
     const hoy = dayjs();
 
     let materiasInfo = [];
+    let carrerasSet = new Set();
+    let carreraPrincipal = "";
+    let totalMateriasCarrera = 0;
 
     if (!isManual) {
       // Para alumnos registrados, buscar materias aprobadas
@@ -286,6 +335,7 @@ async function procesarCertificadoMateriasAprobadas(
               {
                 model: MateriaPlan,
                 as: "materiaPlan",
+                attributes: ["anio_carrera"],
                 include: [
                   {
                     model: Materia,
@@ -309,32 +359,174 @@ async function procesarCertificadoMateriasAprobadas(
             ],
           },
         ],
-        order: [["fecha_inscripcion", "ASC"]],
+        order: [
+          [{ model: MateriaPlanCicloLectivo, as: "ciclo" }, { model: MateriaPlan, as: "materiaPlan" }, "anio_carrera", "ASC"]
+        ],
       });
 
-      materiasInfo = materiasAprobadas.map((inscripcion) => ({
-        nombre:
-          inscripcion.ciclo?.materiaPlan?.materia?.nombre ||
-          "Materia no especificada",
-        carrera:
-          inscripcion.ciclo?.materiaPlan?.planEstudio?.carrera?.nombre ||
-          "Carrera no especificada",
-        fechaAprobacion: inscripcion.fecha_aprobacion
-          ? dayjs(inscripcion.fecha_aprobacion).format("DD/MM/YYYY")
-          : "—",
-        cicloLectivo: inscripcion.ciclo?.ciclo_lectivo || "—",
-      }));
+      // Convertir números a letras para calificaciones
+      const numerosALetras = {
+        1: "Uno", 2: "Dos", 3: "Tres", 4: "Cuatro", 5: "Cinco",
+        6: "Seis", 7: "Siete", 8: "Ocho", 9: "Nueve", 10: "Diez"
+      };
+
+      materiasInfo = materiasAprobadas.map((inscripcion) => {
+        const carreraNombre = inscripcion.ciclo?.materiaPlan?.planEstudio?.carrera?.nombre || "";
+        if (carreraNombre) {
+          carrerasSet.add(carreraNombre);
+          carreraPrincipal = carreraNombre; // La última será la principal
+        }
+
+        const notaNumero = Math.round(parseFloat(inscripcion.nota_final) || 0);
+        
+        return {
+          anio: inscripcion.ciclo?.materiaPlan?.anio_carrera ? `${inscripcion.ciclo.materiaPlan.anio_carrera}º Año` : "—",
+          nombre: inscripcion.ciclo?.materiaPlan?.materia?.nombre || "Materia no especificada",
+          fechaAprobacion: inscripcion.fecha_finalizacion
+            ? dayjs(inscripcion.fecha_finalizacion).format("DD/MM/YYYY")
+            : "—",
+          notaNumero: notaNumero || "—",
+          notaLetras: numerosALetras[notaNumero] || "—",
+        };
+      });
+
+      // Calcular porcentaje de materias aprobadas
+      // Esto requeriría saber cuántas materias tiene la carrera en total
+      // Por ahora lo dejamos genérico
+      totalMateriasCarrera = 23; // Valor por defecto, ajustá según tu plan de estudios
+      const porcentajeAprobado = Math.round((materiasInfo.length / totalMateriasCarrera) * 100);
+
+      var porcentaje = porcentajeAprobado;
     } else {
       // Para alumnos manuales, lista vacía
       materiasInfo = [];
+      var porcentaje = 0;
+    }
+
+    // ✅ Obtener TODAS las materias del plan de estudios oficial (no solo las inscriptas)
+    let todasLasMaterias = [];
+    let resolucionPlan = "";
+    if (!isManual) {
+      // Obtener la carrera activa del alumno
+      const alumnoCarrera = await AlumnoCarrera.findOne({
+        where: {
+          id_persona: alumno.id_persona,
+          activo: { [Op.or]: [true, 1] },
+        },
+        include: [
+          {
+            model: Carrera,
+            as: "carrera",
+            attributes: ["nombre"],
+            include: [
+              {
+                model: PlanEstudio,
+                as: "planesEstudio",
+                where: { vigente: 1 },
+                attributes: ["id", "resolucion"],
+                include: [
+                  {
+                    model: MateriaPlan,
+                    as: "materiaPlans",
+                    attributes: ["id", "anio_carrera", "horas_catedra"],
+                    include: [
+                      {
+                        model: Materia,
+                        as: "materia",
+                        attributes: ["nombre"],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      if (alumnoCarrera && alumnoCarrera.carrera) {
+        const planEstudio = alumnoCarrera.carrera.planesEstudio[0];
+        resolucionPlan = planEstudio?.resolucion || "S/N";
+        
+        // Obtener todas las materias del plan
+        const materiasDelPlan = planEstudio?.materiaPlans || [];
+        
+        // Crear un mapa de las inscripciones del alumno para saber el estado de cada materia
+        const inscripcionesMap = new Map();
+        const inscripcionesAlumno = await InscripcionMateria.findAll({
+          where: {
+            id_usuario_alumno: alumno.id,
+          },
+          include: [
+            {
+              model: MateriaPlanCicloLectivo,
+              as: "ciclo",
+              attributes: ["ciclo_lectivo"],
+              include: [
+                {
+                  model: MateriaPlan,
+                  as: "materiaPlan",
+                  attributes: ["id"],
+                },
+              ],
+            },
+          ],
+        });
+
+        inscripcionesAlumno.forEach((insc) => {
+          const idMateriaPlan = insc.ciclo?.materiaPlan?.id;
+          if (idMateriaPlan) {
+            inscripcionesMap.set(idMateriaPlan, {
+              estado: insc.estado || "NO CURSADA",
+              fechaFinalizacion: insc.fecha_finalizacion
+                ? dayjs(insc.fecha_finalizacion).format("DD/MM/YYYY")
+                : "—",
+              nota: insc.nota_final ? Math.round(parseFloat(insc.nota_final)) : "—",
+              cicloLectivo: insc.ciclo?.ciclo_lectivo || "—",
+            });
+          }
+        });
+
+        // Mapear todas las materias del plan con su estado
+        todasLasMaterias = materiasDelPlan.map((materiaPlan) => {
+          const inscripcion = inscripcionesMap.get(materiaPlan.id) || {
+            estado: "NO CURSADA",
+            fechaFinalizacion: "—",
+            nota: "—",
+            cicloLectivo: "—",
+          };
+
+          let claseEstado = "pendiente";
+          if (inscripcion.estado === "APROBADA") claseEstado = "aprobada";
+          else if (inscripcion.estado === "CURSANDO") claseEstado = "cursando";
+          else if (inscripcion.estado === "REGULAR" || inscripcion.estado === "REGULARIZADA") claseEstado = "regular";
+
+          return {
+            anio: materiaPlan.anio_carrera || 0,
+            nombre: materiaPlan.materia?.nombre || "Materia no especificada",
+            horas: materiaPlan.horas_catedra || 0,
+            estado: inscripcion.estado,
+            fechaFinalizacion: inscripcion.fechaFinalizacion,
+            nota: inscripcion.nota,
+            cicloLectivo: inscripcion.cicloLectivo,
+            claseEstado: claseEstado,
+          };
+        });
+
+        // Ordenar por año de carrera
+        todasLasMaterias.sort((a, b) => a.anio - b.anio);
+      }
     }
 
     const data = {
       nombre: alumno.persona.nombre,
       apellido: alumno.persona.apellido,
       dni: alumno.persona.dni,
+      carreras: Array.from(carrerasSet),
+      carreraPrincipal: carreraPrincipal,
       materias: materiasInfo,
       totalMaterias: materiasInfo.length,
+      porcentajeAprobado: porcentaje,
       contacto,
       sitio,
       email,
@@ -342,6 +534,41 @@ async function procesarCertificadoMateriasAprobadas(
       mes: hoy.format("MMMM"),
       anio: hoy.format("YYYY"),
       isManual,
+    };
+
+    // Agrupar materias por año de forma genérica
+    const materiasPorAnio = {};
+    todasLasMaterias.forEach(materia => {
+      const anio = materia.anio || 0;
+      if (!materiasPorAnio[anio]) {
+        materiasPorAnio[anio] = [];
+      }
+      materiasPorAnio[anio].push(materia);
+    });
+
+    // Convertir a formato de años para el template
+    const aniosArray = Object.keys(materiasPorAnio)
+      .filter(anio => anio > 0) // Filtrar materias sin año
+      .sort((a, b) => parseInt(a) - parseInt(b))
+      .map((anio, index) => {
+        const materias = materiasPorAnio[anio];
+        const totalHoras = materias.reduce((sum, m) => sum + (m.horas || 0), 0);
+        
+        return {
+          titulo: `${anio}° AÑO`,
+          materias: materias.map((m, idx) => ({
+            numero: idx + 1,
+            nombre: m.nombre,
+            horas: `${m.horas || 0} Hs.`
+          })),
+          totalHoras: `${totalHoras} Hs.`
+        };
+      });
+
+    const dataPlanCompleto = {
+      carrera: carreraPrincipal,
+      resolucionPlan: resolucionPlan,
+      anios: aniosArray,
     };
 
     if (req.query.format === "html") {
@@ -354,14 +581,30 @@ async function procesarCertificadoMateriasAprobadas(
         );
     }
 
-    const pdf = await generarCertificadoMateriasAprobadas(data);
+    // ✅ Generar ambos PDFs (cada uno con su propia página)
+    const pdf1 = await generarCertificadoMateriasAprobadas(data);
+    const pdf2 = await generarPlanEstudiosCompleto(dataPlanCompleto);
+
+    // ✅ Combinar los PDFs
+    const pdfDoc = await PDFDocument.create();
+    
+    const pdf1Doc = await PDFDocument.load(pdf1);
+    const pages1 = await pdfDoc.copyPages(pdf1Doc, pdf1Doc.getPageIndices());
+    pages1.forEach(page => pdfDoc.addPage(page));
+
+    const pdf2Doc = await PDFDocument.load(pdf2);
+    const pages2 = await pdfDoc.copyPages(pdf2Doc, pdf2Doc.getPageIndices());
+    pages2.forEach(page => pdfDoc.addPage(page));
+
+    const pdfBytes = await pdfDoc.save();
+
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
       `inline; filename="certificado_materias_aprobadas_${data.apellido}_${data.dni}.pdf"`
     );
     res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
-    res.send(pdf);
+    res.send(Buffer.from(pdfBytes));
   } catch (e) {
     next(e);
   }
@@ -382,43 +625,43 @@ async function procesarCertificadoAsistenciaExamen(
     const email = "terciario@lujanbuenviaje.edu.ar";
     const hoy = dayjs();
 
-    let examenesInfo = [];
+    let nombreCarrera = "";
+    let anioCarrera = "";
+    let nombreMateria = "";
+    let diaExamen = "";
+    let mesExamen = "";
+    let anioExamen = "";
 
     if (!isManual) {
-      // Para alumnos registrados, buscar asistencias a exámenes
-      const asistenciasExamen = await AsistenciaExamenFinal.findAll({
+      // Para alumnos registrados, obtener información de sus inscripciones
+      const inscripciones = await InscripcionMateria.findAll({
         where: {
           id_usuario_alumno: alumno.id,
+          estado: { [Op.in]: ["REGULAR", "APROBADA", "CURSANDO"] },
         },
         include: [
           {
-            model: ExamenFinal,
-            as: "examenFinal",
+            model: MateriaPlanCicloLectivo,
+            as: "ciclo",
             include: [
               {
-                model: MateriaPlanCicloLectivo,
-                as: "ciclo",
+                model: MateriaPlan,
+                as: "materiaPlan",
+                attributes: ["anio_carrera"],
                 include: [
                   {
-                    model: MateriaPlan,
-                    as: "materiaPlan",
+                    model: Materia,
+                    as: "materia",
+                    attributes: ["nombre"],
+                  },
+                  {
+                    model: PlanEstudio,
+                    as: "planEstudio",
                     include: [
                       {
-                        model: Materia,
-                        as: "materia",
+                        model: Carrera,
+                        as: "carrera",
                         attributes: ["nombre"],
-                      },
-                      {
-                        model: PlanEstudio,
-                        as: "planEstudio",
-                        attributes: ["resolucion"],
-                        include: [
-                          {
-                            model: Carrera,
-                            as: "carrera",
-                            attributes: ["nombre"],
-                          },
-                        ],
                       },
                     ],
                   },
@@ -427,39 +670,64 @@ async function procesarCertificadoAsistenciaExamen(
             ],
           },
         ],
-        order: [["fecha_asistencia", "DESC"]],
       });
 
-      examenesInfo = asistenciasExamen.map((asistencia) => ({
-        materia:
-          asistencia.examenFinal?.materiaPlanCiclo?.materiaPlan?.materia
-            ?.nombre || "Materia no especificada",
-        carrera:
-          asistencia.examenFinal?.materiaPlanCiclo?.materiaPlan?.planEstudio
-            ?.carrera?.nombre || "Carrera no especificada",
-        fechaExamen: asistencia.fecha_asistencia
-          ? dayjs(asistencia.fecha_asistencia).format("DD/MM/YYYY")
-          : "—",
-        llamado: asistencia.examenFinal?.llamado || "—",
-        presente: asistencia.presente ? "Sí" : "No",
-      }));
+      // Encontrar el año más alto de las materias cursadas
+      let anioMasAlto = 0;
+      let materiaDelAnioMasAlto = null;
+      let carreraDelAnioMasAlto = null;
+
+      inscripciones.forEach((inscripcion) => {
+        const anio = inscripcion.ciclo?.materiaPlan?.anio_carrera || 0;
+        if (anio > anioMasAlto) {
+          anioMasAlto = anio;
+          materiaDelAnioMasAlto =
+            inscripcion.ciclo?.materiaPlan?.materia?.nombre;
+          carreraDelAnioMasAlto =
+            inscripcion.ciclo?.materiaPlan?.planEstudio?.carrera?.nombre;
+        }
+      });
+
+      // Convertir número de año a texto
+      const aniosTexto = {
+        1: "primer año",
+        2: "segundo año",
+        3: "tercer año",
+        4: "cuarto año",
+        5: "quinto año",
+      };
+
+      nombreCarrera = req.query.nombreCarrera || carreraDelAnioMasAlto || "";
+      anioCarrera = req.query.anioCarrera || aniosTexto[anioMasAlto] || "";
+      nombreMateria = req.query.nombreMateria || "Materia no especificada";
     } else {
-      // Para alumnos manuales, lista vacía
-      examenesInfo = [];
+      // Para modo manual, usar query params
+      nombreCarrera = req.query.nombreCarrera || "";
+      anioCarrera = req.query.anioCarrera || "";
+      nombreMateria = req.query.nombreMateria || "";
     }
+
+    // Datos del examen - siempre desde query params (completados a mano)
+    diaExamen = req.query.diaExamen || "";
+    mesExamen = req.query.mesExamen || "";
+    anioExamen = req.query.anioExamen || "";
 
     const data = {
       nombre: alumno.persona.nombre,
       apellido: alumno.persona.apellido,
       dni: alumno.persona.dni,
-      examenes: examenesInfo,
-      totalExamenes: examenesInfo.length,
+      nombreCarrera,
+      anioCarrera,
+      nombreMateria,
+      diaExamen,
+      mesExamen,
+      anioExamen,
       contacto,
       sitio,
       email,
-      dia: hoy.format("D"),
-      mes: hoy.format("MMMM"),
-      anio: hoy.format("YYYY"),
+      diaPresente: hoy.format("D"),
+      mesPresente: hoy.format("MMMM"),
+      anioPresente: hoy.format("YYYY"),
       isManual,
     };
 

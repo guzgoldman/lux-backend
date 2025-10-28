@@ -3,7 +3,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Constancia de Alumno Regular</title>
+    <title>Constancia de Asistencia a Examen</title>
     <style>
       @page { size: A4; margin: 12mm; } * { box-sizing: border-box; } body {
       font-family: "Times New Roman", serif; font-size: 12pt; color: #111; }
@@ -33,30 +33,32 @@
       </div>
     </header>
 
-    <h1>Constancia de Alumno Regular</h1>
+    <h1>Constancia de Asistencia a Examen</h1>
 
     <div class="cuerpo">
-      La Secretaría del Instituto Superior Nuestra Señora de Luján del Buen Viaje (DIEGEP
-      4283) hace constar que
+      <p>Por la presente, se deja constancia de que
       <span class="resalt">{{nombre}} {{apellido}}</span>, con DNI
-      <span class="resalt">{{dni}}</span>, es alumno/a regular de la/s carrera/s
-      {{#each carreras}}
-        <p>- {{nombre}} (Res. Nº {{resolucion}})</p>
-      {{/each}}
-      {{#if anioAlumno}}
-        cursando actualmente <span class="resalt">{{anioAlumno}}</span>.
-      {{else}}
-        .
-      {{/if}}
-      <br />
-      A pedido del interesado y al solo efecto de ser presentada ante las
-      autoridades que correspondan, se extiende la presente constancia en Villa
-      Loma Hermosa, a los
-      {{dia}}
+      <span class="resalt">{{dni}}</span>, alumno/a{{#if anioCarrera}} de <span class="resalt">{{anioCarrera}}</span>{{/if}} de la carrera
+      <span class="resalt">{{nombreCarrera}}</span>, ha rendido examen parcial/final el día
+      <span class="resalt">{{diaExamen}}</span>
+      de
+      <span class="resalt">{{mesExamen}}</span>
+      de
+      <span class="resalt">{{anioExamen}}</span>, correspondiente a la asignatura
+      <span class="resalt">{{nombreMateria}}</span>.</p>
+
+      <p>A pedido del interesado/a y para presentar ante quien corresponda, se extiende la presente en Villa Loma Hermosa, a los
+      <span class="resalt">{{diaPresente}}</span>
       días del mes de
-      {{mes}}
+      <span class="resalt">{{mesPresente}}</span>
       del año
-      {{anio}}.
+      <span class="resalt">{{anioPresente}}</span>.</p>
+    </div>
+
+    <div class="firma">
+      <div class="linea">
+        Firma y sello aclaratorio<br />de Secretaría
+      </div>
     </div>
 
     <div class="pie">
