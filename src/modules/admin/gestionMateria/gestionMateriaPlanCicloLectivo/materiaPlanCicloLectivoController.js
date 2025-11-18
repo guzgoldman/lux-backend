@@ -15,6 +15,7 @@ const {
   ClaseProfesor,
   CalificacionCuatrimestre,
 } = require("../../../../models");
+const sequelize = require("../../../../config/db");
 
 exports.registrarMateriaPlanCicloLectivo = async (req, res, next) => {
   const {
@@ -31,7 +32,15 @@ exports.registrarMateriaPlanCicloLectivo = async (req, res, next) => {
       return res.status(404).json({ error: "Materia del plan no encontrada" });
     }
 
-    const nuevaMateriaPlanCicloLectivo = await MateriaPlanCicloLectivo.create({
+    const materiaExistente = await MateriaPlanCicloLectivo.findOne({
+      where: { id_materia_plan: idMateriaPlan, ciclo_lectivo: cicloLectivo },
+    })
+
+    if (materiaExistente) {
+      return res.status(400).json({ error: "Materia ya registrada en el ciclo lectivo" });
+    }
+
+    await MateriaPlanCicloLectivo.create({
       id_materia_plan: materiaPlan.id,
       ciclo_lectivo: cicloLectivo,
       fecha_inicio: fechaInicio,
@@ -39,7 +48,7 @@ exports.registrarMateriaPlanCicloLectivo = async (req, res, next) => {
       tipo_aprobacion: tipoAprobacion,
     });
 
-    res.status(201).json(nuevaMateriaPlanCicloLectivo);
+    res.status(201).json({ message: "Materia registrada correctamente" });
   } catch (err) {
     next(err);
   }
@@ -82,30 +91,36 @@ exports.listarMateriasPlanCicloLectivo = async (req, res, next) => {
       res.status(200).json(materiasPlanCicloLectivo);
     } else if (rolUsuario === "Administrador") {
       const materiasPlanCicloLectivo = await MateriaPlanCicloLectivo.findAll({
+        attributes: ['id', 'ciclo_lectivo', 'fecha_inicio', 'fecha_cierre', 'tipo_aprobacion'],
         include: [
           {
             model: MateriaPlan,
             as: "materiaPlan",
+            attributes: ['id'],
             include: [
               {
                 model: PlanEstudio,
                 as: "planEstudio",
-                include: [{ model: Carrera, as: "carrera" }],
+                attributes: ['resolucion'],
+                include: [{ model: Carrera, as: "carrera", attributes: ['nombre'] }],
               },
-              { model: Materia, as: "materia" },
+              { model: Materia, as: "materia", attributes: ['nombre'] },
             ],
           },
           {
             model: ProfesorMateria,
             as: "profesores",
+            attributes: ['id_usuario_profesor', 'rol'],
             include: [
               {
                 model: Usuario,
                 as: "profesor",
+                attributes: ['id'],
                 include: [
                   {
                     model: Persona,
                     as: "persona",
+                    attributes: ['nombre', 'apellido']
                   },
                 ],
               },
@@ -258,6 +273,7 @@ exports.detalleMateriaPlanCicloLectivo = async (req, res, next) => {
         })),
       })),
       profesores: profesores.map((p) => ({
+        id_usuario: p.profesor?.id,
         nombre: p.profesor?.persona?.nombre,
         apellido: p.profesor?.persona?.apellido,
         email: p.profesor?.persona?.email,
@@ -395,6 +411,15 @@ exports.registrarClaseInformacion = async (req, res, next) => {
     if (!clase) {
       await t.rollback();
       return res.status(404).json({ error: "Clase no encontrada" });
+    }
+
+    // Validar que el profesor existe si se proporciona
+    if (idProfesor) {
+      const profesor = await Usuario.findByPk(idProfesor, { transaction: t });
+      if (!profesor) {
+        await t.rollback();
+        return res.status(404).json({ error: "Profesor no encontrado" });
+      }
     }
 
     const nuevoTema = await Tema.create(
