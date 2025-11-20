@@ -6,13 +6,13 @@ const {
   MateriaPlanCicloLectivo,
   Materia,
   HorarioMateria,
-  Evaluacion,
   AlumnoCarrera,
   Carrera,
   Rol,
   PlanEstudio,
   MateriaPlan,
-  RolUsuario
+  RolUsuario,
+  InscripcionExamenFinal
 } = require("../../models");
 const bcrypt = require("bcrypt");
 const { Op } = require("sequelize");
@@ -123,14 +123,6 @@ exports.perfil = async (req, res, next) => {
                 },
               ],
             },
-            {
-              model: Evaluacion,
-              as: "evaluaciones",
-              attributes: [
-                ["nota", "nota"],
-                ["id_evaluacion_tipo", "tipo"],
-              ],
-            },
           ],
         },
         {
@@ -161,11 +153,35 @@ exports.perfil = async (req, res, next) => {
 
     const materiasAprobadasUnicas = materiasAprobadasIds.size;
 
-    const promedio =
-      usuario.inscripciones
-        .flatMap((i) => i.evaluaciones)
-        .reduce((sum, ev) => sum + parseFloat(ev.nota), 0) /
-        usuario.inscripciones.flatMap((i) => i.evaluaciones).length || 0;
+    // Calcular promedio con materias aprobadas y exámenes finales aprobados
+    const notasAprobadas = [];
+    
+    // Obtener notas de materias aprobadas por promoción
+    usuario.inscripciones
+      .filter((i) => i.estado === "Aprobada" && i.nota_final !== null)
+      .forEach((i) => {
+        notasAprobadas.push(parseFloat(i.nota_final));
+      });
+    
+    // Obtener notas de exámenes finales aprobados
+    const examenesFinalesAprobados = await InscripcionExamenFinal.findAll({
+      where: {
+        id_usuario_alumno: idUsuario,
+        nota: { [Op.not]: null }
+      },
+      attributes: ['nota']
+    });
+    
+    examenesFinalesAprobados.forEach((examen) => {
+      if (examen.nota !== null) {
+        notasAprobadas.push(parseFloat(examen.nota));
+      }
+    });
+    
+    // Calcular promedio
+    const promedio = notasAprobadas.length > 0
+      ? notasAprobadas.reduce((sum, nota) => sum + nota, 0) / notasAprobadas.length
+      : 0;
 
     const tipoAlumnoMap = {
       1: "Regular",

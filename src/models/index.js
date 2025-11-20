@@ -2,13 +2,11 @@ const sequelize = require("../config/db");
 const { DataTypes } = require("sequelize");
 const personaModel = require("./persona");
 const direccionModel = require("./direccion");
-const historialDireccionModel = require("./historial_direccion");
 const usuarioModel = require("./usuario");
 const rolModel = require("./rol");
 const rolUsuarioModel = require("./rol_usuario");
-const alumnoTipoModel = require("./alumno_tipo");
 const preinscripcionModel = require("./preinscripcion");
-const preinscripcionEstadoModel = require("./preinscripcion_estado");
+const configuracionSistemaModel = require("./configuracion_sistema");
 const carreraModel = require("./carrera");
 const planEstudioModel = require("./plan_estudio");
 const materiaModel = require("./materia");
@@ -16,38 +14,28 @@ const materiaPlanModel = require("./materia_plan");
 const materiaPlanCicloLectivoModel = require("./materia_plan_ciclo_lectivo");
 const correlativaModel = require("./correlativa");
 const examenFinalModel = require("./examen_final");
-const historialExamenFinalModel = require("./historial_examen_final");
 const profesorMateriaModel = require("./profesor_materia");
 const alumnoCarreraModel = require("./alumno_carrera");
 const inscripcionMateriaModel = require("./inscripcion_materia");
-const historialInscripcionMateriaModel = require("./historial_inscripcion_materia");
 const inscripcionExamenFinalModel = require("./inscripcion_examen_final");
-const historialInscripcionExamenFinalModel = require("./historial_inscripcion_examen_final");
 const claseModel = require("./clase");
 const claseProfesorModel = require("./clase_profesor");
 const temaModel = require("./tema");
 const claseTemaModel = require("./clase_tema");
-const evaluacionTipoModel = require("./evaluacion_tipo");
-const evaluacionModel = require("./evaluacion");
 const asistenciaModel = require("./asistencia");
-const historialAsistenciaModel = require("./historial_asistencia");
 const certificadoModel = require("./certificado");
 const alertaModel = require("./alerta");
 const asistenciaExamenFinalModel = require("./asistencia_examen_final");
-const historialAsistenciaExamenFinalModel = require("./historial_asistencia_examen_final");
 const horarioMateriaModel = require("./horario_materia");
 const calificacionCuatrimestreModel = require("./calificacion_cuatrimestre");
 const acreditacionEquivalenciaModel = require("./acreditacion_equivalencia");
-
 const Persona = personaModel(sequelize, DataTypes);
 const Direccion = direccionModel(sequelize, DataTypes);
-const HistorialDireccion = historialDireccionModel(sequelize, DataTypes);
 const Usuario = usuarioModel(sequelize, DataTypes);
 const Rol = rolModel(sequelize, DataTypes);
 const RolUsuario = rolUsuarioModel(sequelize, DataTypes);
-const AlumnoTipo = alumnoTipoModel(sequelize, DataTypes);
 const Preinscripcion = preinscripcionModel(sequelize, DataTypes);
-const PreinscripcionEstado = preinscripcionEstadoModel(sequelize, DataTypes);
+const ConfiguracionSistema = configuracionSistemaModel(sequelize, DataTypes);
 const Carrera = carreraModel(sequelize, DataTypes);
 const PlanEstudio = planEstudioModel(sequelize, DataTypes);
 const Materia = materiaModel(sequelize, DataTypes);
@@ -58,19 +46,10 @@ const MateriaPlanCicloLectivo = materiaPlanCicloLectivoModel(
 );
 const Correlativa = correlativaModel(sequelize, DataTypes);
 const ExamenFinal = examenFinalModel(sequelize, DataTypes);
-const HistorialExamenFinal = historialExamenFinalModel(sequelize, DataTypes);
 const ProfesorMateria = profesorMateriaModel(sequelize, DataTypes);
 const AlumnoCarrera = alumnoCarreraModel(sequelize, DataTypes);
 const InscripcionMateria = inscripcionMateriaModel(sequelize, DataTypes);
-const HistorialInscripcionMateria = historialInscripcionMateriaModel(
-  sequelize,
-  DataTypes
-);
 const InscripcionExamenFinal = inscripcionExamenFinalModel(
-  sequelize,
-  DataTypes
-);
-const HistorialInscripcionExamenFinal = historialInscripcionExamenFinalModel(
   sequelize,
   DataTypes
 );
@@ -78,36 +57,23 @@ const Clase = claseModel(sequelize, DataTypes);
 const ClaseProfesor = claseProfesorModel(sequelize, DataTypes);
 const Tema = temaModel(sequelize, DataTypes);
 const ClaseTema = claseTemaModel(sequelize, DataTypes);
-const EvaluacionTipo = evaluacionTipoModel(sequelize, DataTypes);
-const Evaluacion = evaluacionModel(sequelize, DataTypes);
 const Asistencia = asistenciaModel(sequelize, DataTypes);
-const HistorialAsistencia = historialAsistenciaModel(sequelize, DataTypes);
 const Certificado = certificadoModel(sequelize, DataTypes);
 const Alerta = alertaModel(sequelize, DataTypes);
 const AsistenciaExamenFinal = asistenciaExamenFinalModel(sequelize, DataTypes);
-const HistorialAsistenciaExamenFinal = historialAsistenciaExamenFinalModel(
+const HorarioMateria = horarioMateriaModel(sequelize, DataTypes);
+const CalificacionCuatrimestre = calificacionCuatrimestreModel(
   sequelize,
   DataTypes
 );
-const HorarioMateria = horarioMateriaModel(sequelize, DataTypes);
-const CalificacionCuatrimestre = calificacionCuatrimestreModel(sequelize, DataTypes);
-const AcreditacionEquivalencia = acreditacionEquivalenciaModel(sequelize, DataTypes);
+const AcreditacionEquivalencia = acreditacionEquivalenciaModel(
+  sequelize,
+  DataTypes
+);
 
 // Definición de relaciones
 
 Persona.hasMany(Direccion, { foreignKey: "id_persona", as: "direcciones" });
-
-HistorialDireccion.belongsTo(Direccion, {
-  as: "direccion",
-  foreignKey: "id_direccion",
-  onDelete: "CASCADE",
-  onUpdate: "CASCADE",
-});
-
-HistorialDireccion.belongsTo(Usuario, {
-  as: "usuario",
-  foreignKey: "realizado_por",
-});
 
 Carrera.hasMany(PlanEstudio, { foreignKey: "id_carrera", as: "planesEstudio" });
 
@@ -194,18 +160,6 @@ ExamenFinal.hasMany(InscripcionExamenFinal, {
   foreignKey: "id_examen_final",
 });
 
-HistorialExamenFinal.belongsTo(ExamenFinal, {
-  as: "examenFinal",
-  foreignKey: "id_examen",
-  onDelete: "CASCADE",
-  onUpdate: "CASCADE",
-});
-
-HistorialExamenFinal.belongsTo(Usuario, {
-  as: "usuario",
-  foreignKey: "realizado_por",
-});
-
 ProfesorMateria.belongsTo(Usuario, {
   as: "profesor",
   foreignKey: "id_usuario_profesor",
@@ -225,24 +179,7 @@ MateriaPlanCicloLectivo.hasMany(ProfesorMateria, {
   foreignKey: "id_materia_plan_ciclo_lectivo",
 });
 
-AlumnoCarrera.belongsTo(AlumnoTipo, {
-  as: "tipo",
-  foreignKey: "id_tipo_alumno",
-  onDelete: "CASCADE",
-  onUpdate: "CASCADE",
-});
-
 Usuario.hasMany(AlumnoCarrera, { foreignKey: "id_persona", as: "carreras" });
-
-HistorialInscripcionMateria.belongsTo(Usuario, {
-  as: "usuario",
-  foreignKey: "realizado_por",
-});
-
-HistorialInscripcionMateria.belongsTo(InscripcionMateria, {
-  as: "inscripcion",
-  foreignKey: ["id_usuario_alumno", "id_materia_plan_ciclo_lectivo"],
-});
 
 InscripcionExamenFinal.belongsTo(Usuario, {
   as: "alumno",
@@ -263,16 +200,6 @@ InscripcionExamenFinal.belongsTo(InscripcionMateria, {
   foreignKey: "id_inscripcion_materia",
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
-});
-
-HistorialInscripcionExamenFinal.belongsTo(Usuario, {
-  as: "usuario",
-  foreignKey: "realizado_por",
-});
-
-HistorialInscripcionExamenFinal.belongsTo(InscripcionExamenFinal, {
-  as: "inscripcion",
-  foreignKey: ["id_usuario_alumno", "id_examen_final"],
 });
 
 Clase.belongsTo(MateriaPlanCicloLectivo, {
@@ -315,11 +242,6 @@ ClaseTema.belongsTo(Tema, {
   onUpdate: "CASCADE",
 });
 
-Evaluacion.belongsTo(EvaluacionTipo, {
-  as: "tipo",
-  foreignKey: "id_evaluacion_tipo",
-});
-
 Asistencia.belongsTo(Clase, {
   as: "clase",
   foreignKey: "id_clase",
@@ -339,18 +261,6 @@ Asistencia.belongsTo(Usuario, {
   foreignKey: "id_usuario_profesor_registro",
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
-});
-
-HistorialAsistencia.belongsTo(Asistencia, {
-  as: "asistencia",
-  foreignKey: "id_asistencia",
-  onDelete: "CASCADE",
-  onUpdate: "CASCADE",
-});
-
-HistorialAsistencia.belongsTo(Usuario, {
-  as: "usuario",
-  foreignKey: "realizado_por",
 });
 
 Certificado.belongsTo(Usuario, {
@@ -386,18 +296,6 @@ AsistenciaExamenFinal.belongsTo(Usuario, {
   foreignKey: "id_usuario_profesor_control",
   onDelete: "CASCADE",
   onUpdate: "CASCADE",
-});
-
-HistorialAsistenciaExamenFinal.belongsTo(AsistenciaExamenFinal, {
-  as: "asistenciaExamenFinal",
-  foreignKey: "id_asistencia_examen_final",
-  onDelete: "CASCADE",
-  onUpdate: "CASCADE",
-});
-
-HistorialAsistenciaExamenFinal.belongsTo(Usuario, {
-  as: "usuario",
-  foreignKey: "realizado_por",
 });
 
 Preinscripcion.belongsTo(Persona, {
@@ -571,23 +469,9 @@ HorarioMateria.belongsTo(MateriaPlanCicloLectivo, {
   onUpdate: "CASCADE",
 });
 
-InscripcionMateria.hasMany(Evaluacion, {
-  foreignKey: "id_inscripcion_materia",
-  as: "evaluaciones",
-  onDelete: "CASCADE",
-  onUpdate: "CASCADE",
-});
-
 InscripcionMateria.hasMany(CalificacionCuatrimestre, {
-  as: 'calificaciones',
-  foreignKey: 'id_inscripcion_materia'
-});
-
-Evaluacion.belongsTo(InscripcionMateria, {
+  as: "calificaciones",
   foreignKey: "id_inscripcion_materia",
-  as: "inscripcion",
-  onDelete: "CASCADE",
-  onUpdate: "CASCADE",
 });
 
 Usuario.belongsToMany(Rol, {
@@ -653,11 +537,9 @@ module.exports = {
   sequelize,
   Persona,
   Direccion,
-  HistorialDireccion,
   Usuario,
   Rol,
   RolUsuario,
-  AlumnoTipo,
   Carrera,
   PlanEstudio,
   Materia,
@@ -665,28 +547,21 @@ module.exports = {
   MateriaPlanCicloLectivo,
   Correlativa,
   ExamenFinal,
-  HistorialExamenFinal,
   ProfesorMateria,
   AlumnoCarrera,
   InscripcionMateria,
-  HistorialInscripcionMateria,
   InscripcionExamenFinal,
-  HistorialInscripcionExamenFinal,
   Clase,
   ClaseProfesor,
   Tema,
   ClaseTema,
-  EvaluacionTipo,
-  Evaluacion,
   Asistencia,
-  HistorialAsistencia,
   Certificado,
   Alerta,
   AsistenciaExamenFinal,
-  HistorialAsistenciaExamenFinal,
   HorarioMateria,
   Preinscripcion,
-  PreinscripcionEstado,
+  ConfiguracionSistema,
   CalificacionCuatrimestre,
-  AcreditacionEquivalencia
+  AcreditacionEquivalencia,
 };

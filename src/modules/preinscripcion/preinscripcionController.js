@@ -4,15 +4,15 @@ const {
   Direccion,
   Preinscripcion,
   Carrera,
-  PreinscripcionEstado,
+  ConfiguracionSistema,
 } = require("../../models");
   const { enqueueEmail } = require("../../queues/email.queue")
 
 exports.createPreinscripcion = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
-    const estado = await PreinscripcionEstado.findByPk(1);
-    if (!estado || estado.abierta === 0) {
+    const estado = await ConfiguracionSistema.findByPk(1);
+    if (!estado || estado.preinscripciones_abiertas === 0) {
       await t.rollback();
       return res.status(403).json({
         error: "Las preinscripciones están actualmente cerradas",
@@ -150,10 +150,10 @@ exports.createPreinscripcion = async (req, res, next) => {
 
 exports.getEstadoPreinscripcion = async (req, res, next) => {
   try {
-    const estado = await PreinscripcionEstado.findByPk(1);
+    const estado = await ConfiguracionSistema.findByPk(1);
 
     res.status(200).json({
-      abierta: estado ? estado.abierta : 0,
+      abierta: estado ? estado.preinscripciones_abiertas : 0,
     });
   } catch (error) {
     next(error);
@@ -162,11 +162,11 @@ exports.getEstadoPreinscripcion = async (req, res, next) => {
 
 exports.toggleEstadoPreinscripcion = async (req, res, next) => {
   try {
-    const estado = await PreinscripcionEstado.findByPk(1);
+    const estado = await ConfiguracionSistema.findByPk(1);
 
-    const nuevoEstado = estado.abierta ? 0 : 1;
+    const nuevoEstado = estado.preinscripciones_abiertas ? 0 : 1;
 
-    await estado.update({ abierta: nuevoEstado });
+    await estado.update({ preinscripciones_abiertas: nuevoEstado });
 
     res.status(200).json({
       message: `Preinscripciones ${nuevoEstado ? "abiertas" : "cerradas"}`,

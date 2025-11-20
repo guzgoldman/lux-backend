@@ -12,6 +12,10 @@ const sequelize = new Sequelize(
     port: process.env.DB_PORT || 3306,
     dialect: "mysql",
     logging: false,
+    timezone: '-03:00', // GMT-3 (Argentina)
+    dialectOptions: {
+      timezone: '-03:00',
+    },
     pool: {
       max: 10,
       min: 0,

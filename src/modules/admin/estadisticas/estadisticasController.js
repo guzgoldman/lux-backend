@@ -2,10 +2,6 @@ const {
   AlumnoCarrera,
   Persona,
   Carrera,
-  AlumnoTipo,
-  MateriaPlan,
-  InscripcionMateria,
-  PlanEstudio,
 } = require("../../../models/");
 const { Op, fn, col, literal } = require("sequelize");
 

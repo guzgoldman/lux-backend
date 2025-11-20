@@ -13,6 +13,7 @@ const {
   ExamenFinal,
   PlanEstudio,
   CalificacionCuatrimestre,
+  ConfiguracionSistema,
 } = require("../../models");
 const { Op } = require("sequelize");
 
@@ -166,6 +167,14 @@ exports.registrarInscripcionMateria = async (req, res) => {
   const { idMateriaPlanCicloLectivo } = req.params;
 
   try {
+    // Verificar que las inscripciones a materias estén abiertas
+    const configuracion = await ConfiguracionSistema.findByPk(1);
+    if (!configuracion || configuracion.inscripciones_materias_abiertas === 0) {
+      return res.status(403).json({
+        error: "Las inscripciones a materias se encuentran cerradas"
+      });
+    }
+
     // Verificar que la materia existe y obtener su fecha de cierre
     const materiaPlanCiclo = await MateriaPlanCicloLectivo.findByPk(
       idMateriaPlanCicloLectivo,
@@ -178,30 +187,6 @@ exports.registrarInscripcionMateria = async (req, res) => {
       return res.status(404).json({ 
         error: "La materia especificada no existe" 
       });
-    }
-
-    const fechaActual = new Date();
-
-    // Verificar si la fecha de cierre ya pasó (solo si existe y no es null)
-    if (materiaPlanCiclo.fecha_cierre !== null && materiaPlanCiclo.fecha_cierre !== undefined) {
-      const fechaCierre = new Date(materiaPlanCiclo.fecha_cierre);
-
-      if (fechaActual > fechaCierre) {
-        return res.status(400).json({ 
-          error: "El periodo de inscripción para esta materia ha finalizado" 
-        });
-      }
-    }
-
-    // Verificar si la fecha de inicio aún no ha llegado (solo si existe y no es null)
-    if (materiaPlanCiclo.fecha_inicio !== null && materiaPlanCiclo.fecha_inicio !== undefined) {
-      const fechaInicio = new Date(materiaPlanCiclo.fecha_inicio);
-      
-      if (fechaActual < fechaInicio) {
-        return res.status(400).json({ 
-          error: "El periodo de inscripción para esta materia aún no ha comenzado" 
-        });
-      }
     }
 
     await InscripcionMateria.create({
@@ -392,10 +377,7 @@ exports.verificarEstadoInscripcionMaterias = async (req, res) => {
         razonBloqueo = "Correlativas no cumplidas";
       } else if (fechaCierre && fechaActual > fechaCierre) {
         puedeInscribirse = false;
-        razonBloqueo = "Periodo de inscripción finalizado";
-      } else if (fechaInicio && fechaActual < fechaInicio) {
-        puedeInscribirse = false;
-        razonBloqueo = "Periodo de inscripción aún no ha comenzado";
+        razonBloqueo = "Cursada finalizada";
       }
 
       return {
@@ -433,8 +415,7 @@ exports.verificarEstadoInscripcionMaterias = async (req, res) => {
         "Ya inscripto en esta materia": 1,
         "Materia ya aprobada": 2,
         "Correlativas no cumplidas": 3,
-        "Periodo de inscripción finalizado": 4,
-        "Periodo de inscripción aún no ha comenzado": 5,
+        "Cursada finalizada": 4,
       };
       return (
         (ordenPrioridad[a.razonBloqueo] || 6) -
@@ -783,6 +764,15 @@ exports.registrarInscripcionExamenFinal = async (req, res) => {
   const { idExamenFinal } = req.params;
   const { idInscripcionMateria } = req.body;
   try {
+    // Verificar que las inscripciones a finales estén abiertas
+    const configuracion = await ConfiguracionSistema.findByPk(1);
+    if (!configuracion || configuracion.inscripciones_finales_abiertas === 0) {
+      return res.status(403).json({
+        success: false,
+        message: "Las inscripciones a exámenes finales se encuentran cerradas"
+      });
+    }
+
     await InscripcionExamenFinal.create({
       id_usuario_alumno: idAlumno,
       id_examen_final: idExamenFinal,
