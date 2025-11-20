@@ -767,29 +767,8 @@ exports.verificarEstadoInscripcionFinales = async (req, res) => {
       };
     });
 
-    const resumen = {
-      totalFinales: estadosFinales.length,
-      disponiblesParaInscripcion: estadosFinales.filter(
-        (estado) => estado.puedeInscribirse
-      ).length,
-      yaInscriptoFinal: estadosFinales.filter(
-        (estado) => estado.yaInscriptoFinal
-      ).length,
-      bloqueados: estadosFinales.filter(
-        (estado) => !estado.puedeInscribirse
-      ).length,
-    };
-
-    res.status(200).json({
-      success: true,
-      data: estadosFinales,
-      resumen,
-    });
+    res.status(200).json({estadosFinales});
   } catch (error) {
-    console.error(
-      "Error al verificar estado de inscripción a exámenes finales:",
-      error
-    );
     res.status(500).json({
       success: false,
       message:
