@@ -159,7 +159,6 @@ exports.aceptar = async (req, res, next) => {
           {
             id_persona: persona.id,
             id_carrera: carreraId,
-            id_tipo_alumno: tipoAlumnoId,
             id_plan_estudio_asignado: planVigente.id,
           },
           { transaction: t }

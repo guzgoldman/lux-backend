@@ -49,7 +49,7 @@ exports.perfil = async (req, res, next) => {
             {
               model: AlumnoCarrera,
               as: "carreras",
-              attributes: ["fecha_inscripcion", "activo", "id_tipo_alumno"],
+              attributes: ["fecha_inscripcion", "activo"],
               include: [
                 {
                   model: Carrera,
@@ -193,7 +193,6 @@ exports.perfil = async (req, res, next) => {
     const carreras = usuario.persona.carreras;
     let carreraActiva =
       carreras.find((c) => c.activo === 1) || carreras[0] || {};
-    const idTipo = carreraActiva.id_tipo_alumno;
 
     // Obtener total de materias del plan de estudios vigente
     let totalMateriasPlan = 0;
@@ -215,7 +214,6 @@ exports.perfil = async (req, res, next) => {
       ingreso: carreraActiva.fecha_inscripcion
         ? carreraActiva.fecha_inscripcion
         : null,
-      condicion: tipoAlumnoMap[idTipo] || "Desconocido",
       carrera: carreras.map((c) => c.carrera.nombre).join(", "),
     };
 
