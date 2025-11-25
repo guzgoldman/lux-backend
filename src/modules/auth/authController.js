@@ -1,8 +1,13 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const path = require("path");
+const fs = require("fs");
+const handlebars = require("handlebars");
 require("dotenv").config();
 
-const { Usuario } = require("../../models");
+const { Usuario, Persona } = require("../../models");
+const verificationService = require("../../services/verificationService");
+const { enviarCorreo } = require("../../lib/mailer");
 
 exports.login = async (req, res, next) => {
   const { username, password } = req.body;
@@ -99,4 +104,193 @@ exports.me = (req, res) => {
     return res.status(401).json({ message: "Rol no seleccionado" });
   }
   res.json(req.user);
+};
+
+/**
+ * Solicitar recuperación de contraseña
+ * Envía un código al email del usuario
+ */
+exports.solicitarRecuperacion = async (req, res, next) => {
+  try {
+    const { identifier } = req.body; // username o email
+
+    if (!identifier || identifier.trim() === '') {
+      return res.status(400).json({ 
+        message: "Debe proporcionar su nombre de usuario o email" 
+      });
+    }
+
+    // Buscar usuario por username o por email de su persona
+    const usuario = await Usuario.findOne({
+      where: { username: identifier.trim() },
+      include: [{ model: Persona, as: "persona", required: true }],
+    });
+
+    let usuarioByEmail = null;
+    if (!usuario) {
+      // Intentar buscar por email
+      const persona = await Persona.findOne({
+        where: { email: identifier.trim() },
+      });
+      
+      if (persona) {
+        usuarioByEmail = await Usuario.findOne({
+          where: { id_persona: persona.id },
+          include: [{ model: Persona, as: "persona" }],
+        });
+      }
+    }
+
+    const usuarioEncontrado = usuario || usuarioByEmail;
+
+    // Por seguridad, siempre devolver el mismo mensaje aunque no exista
+    if (!usuarioEncontrado) {
+      return res.json({ 
+        message: "Si el usuario existe, recibirás un código en tu email registrado",
+        sent: false
+      });
+    }
+
+    // Verificar si ya existe una solicitud pendiente
+    const hasPending = await verificationService.hasPendingRequest(
+      usuarioEncontrado.id, 
+      'password_reset'
+    );
+    
+    if (hasPending) {
+      const timeRemaining = await verificationService.getTimeRemaining(
+        usuarioEncontrado.id, 
+        'password_reset'
+      );
+      return res.status(429).json({ 
+        message: "Ya existe una solicitud pendiente. Espera a que expire o usa el código enviado.",
+        timeRemaining: timeRemaining > 0 ? timeRemaining : 0
+      });
+    }
+
+    const expirationMinutes = 15;
+    const code = await verificationService.createPasswordResetRequest(
+      usuarioEncontrado.id,
+      usuarioEncontrado.persona.email,
+      usuarioEncontrado.username,
+      `${usuarioEncontrado.persona.nombre} ${usuarioEncontrado.persona.apellido}`,
+      expirationMinutes
+    );
+
+    // Leer y compilar la plantilla de email
+    const templatePath = path.join(__dirname, '../../templates/recuperar_contrasena.hbs');
+    const templateSource = fs.readFileSync(templatePath, 'utf-8');
+    const template = handlebars.compile(templateSource);
+
+    const html = template({
+      nombre: usuarioEncontrado.persona.nombre,
+      username: usuarioEncontrado.username,
+      code,
+      expirationMinutes
+    });
+
+    // Enviar email
+    await enviarCorreo({
+      to: usuarioEncontrado.persona.email,
+      subject: 'Recuperación de contraseña - Sistema LUX',
+      html
+    });
+
+    res.json({ 
+      message: "Si el usuario existe, recibirás un código en tu email registrado",
+      sent: true,
+      expiresIn: expirationMinutes * 60 // segundos
+    });
+
+  } catch (error) {
+    console.error('[ERROR] Error al solicitar recuperación:', error);
+    next(error);
+  }
+};
+
+/**
+ * Verificar código y restablecer contraseña
+ */
+exports.restablecerContrasena = async (req, res, next) => {
+  try {
+    const { identifier, codigo, nuevaPassword } = req.body;
+
+    // Validaciones
+    if (!identifier || identifier.trim() === '') {
+      return res.status(400).json({ 
+        message: "Debe proporcionar su nombre de usuario o email" 
+      });
+    }
+
+    if (!codigo || codigo.trim() === '') {
+      return res.status(400).json({ 
+        message: "Debe proporcionar el código de verificación" 
+      });
+    }
+
+    if (!nuevaPassword || nuevaPassword.length < 8) {
+      return res.status(400).json({ 
+        message: "La contraseña debe tener al menos 8 caracteres" 
+      });
+    }
+
+    // Buscar usuario por username o email
+    const usuario = await Usuario.findOne({
+      where: { username: identifier.trim() },
+      include: [{ model: Persona, as: "persona", required: true }],
+    });
+
+    let usuarioByEmail = null;
+    if (!usuario) {
+      const persona = await Persona.findOne({
+        where: { email: identifier.trim() },
+      });
+      
+      if (persona) {
+        usuarioByEmail = await Usuario.findOne({
+          where: { id_persona: persona.id },
+          include: [{ model: Persona, as: "persona" }],
+        });
+      }
+    }
+
+    const usuarioEncontrado = usuario || usuarioByEmail;
+
+    if (!usuarioEncontrado) {
+      return res.status(400).json({ 
+        message: "Código inválido o expirado" 
+      });
+    }
+
+    // Verificar código
+    const verificationData = await verificationService.verifyPasswordReset(
+      usuarioEncontrado.id, 
+      codigo.trim()
+    );
+
+    if (!verificationData) {
+      return res.status(400).json({ 
+        message: "Código inválido o expirado" 
+      });
+    }
+
+    // Encriptar nueva contraseña
+    const hashedPassword = await bcrypt.hash(nuevaPassword, 10);
+
+    // Actualizar contraseña
+    await usuarioEncontrado.update({
+      password: hashedPassword
+    });
+
+    // Eliminar la solicitud de recuperación
+    await verificationService.deletePasswordResetRequest(usuarioEncontrado.id);
+
+    res.json({ 
+      message: "Contraseña restablecida correctamente. Ya podés iniciar sesión con tu nueva contraseña."
+    });
+
+  } catch (error) {
+    console.error('[ERROR] Error al restablecer contraseña:', error);
+    next(error);
+  }
 };

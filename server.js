@@ -26,15 +26,15 @@ async function start() {
 
       app.use("/admin/queues", serverAdapter.getRouter());
       console.log(
-        "📊 Bull Board disponible en http://localhost:3000/admin/queues"
+        "Bull Board disponible en http://localhost:3000/admin/queues"
       );
     }
 
     app.listen(PORT, "0.0.0.0", () => {
-      console.log(`🚀 Server corriendo en http://0.0.0.0:${PORT}`);
+      console.log(`Server corriendo en http://0.0.0.0:${PORT}`);
     });
   } catch (err) {
-    console.error("❌ Error al inicializar la DB o el servidor:", err);
+    console.error("Error al inicializar la DB o el servidor:", err);
     process.exit(1);
   }
 }

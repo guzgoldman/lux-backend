@@ -549,7 +549,7 @@ exports.actualizarCalificacionCuatrimestre = async (req, res, next) => {
         const RegularizacionUtils = require("../../../../utils/regularizacion");
         await RegularizacionUtils.actualizarEstadoRegularizacion(inscripcionId);
       } catch (error) {
-        console.log("Error al actualizar el estado");
+        console.log("Error al actualizar el estado", error);
       }
     }, 200);
 

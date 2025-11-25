@@ -40,8 +40,6 @@ class VerificationService {
       expirationMinutes * 60,
       JSON.stringify(data)
     );
-
-    console.log(`[VERIFICATION] Código creado para usuario ${userId} - campo: ${field}`);
     return code;
   }
 
@@ -77,7 +75,6 @@ class VerificationService {
   async deleteVerificationRequest(userId, field) {
     const key = `verification:${userId}:${field}`;
     await redisClient.del(key);
-    console.log(`[VERIFICATION] Código eliminado para usuario ${userId} - campo: ${field}`);
   }
 
   /**
@@ -125,6 +122,67 @@ class VerificationService {
       timeRemaining: timeRemaining > 0 ? timeRemaining : 0,
       createdAt: parsed.createdAt
     };
+  }
+
+  /**
+   * Crea una solicitud de recuperación de contraseña
+   * @param {number} userId - ID del usuario
+   * @param {string} email - Email del usuario
+   * @param {string} username - Username del usuario
+   * @param {string} nombreCompleto - Nombre completo del usuario
+   * @param {number} expirationMinutes - Minutos hasta que expire
+   * @returns {Promise<string>} - Código generado
+   */
+  async createPasswordResetRequest(userId, email, username, nombreCompleto, expirationMinutes = 15) {
+    const code = this.generateCode();
+    const key = `verification:${userId}:password_reset`;
+    
+    const data = {
+      code,
+      email,
+      username,
+      nombreCompleto,
+      createdAt: new Date().toISOString(),
+    };
+
+    await redisClient.setex(
+      key,
+      expirationMinutes * 60,
+      JSON.stringify(data)
+    );
+    return code;
+  }
+
+  /**
+   * Verifica un código de recuperación de contraseña
+   * @param {number} userId - ID del usuario
+   * @param {string} code - Código ingresado
+   * @returns {Promise<object|null>} - Datos si es válido, null si no
+   */
+  async verifyPasswordReset(userId, code) {
+    const key = `verification:${userId}:password_reset`;
+    const data = await redisClient.get(key);
+
+    if (!data) {
+      return null;
+    }
+
+    const parsed = JSON.parse(data);
+
+    if (parsed.code !== code) {
+      return null;
+    }
+
+    return parsed;
+  }
+
+  /**
+   * Elimina una solicitud de recuperación de contraseña
+   * @param {number} userId - ID del usuario
+   */
+  async deletePasswordResetRequest(userId) {
+    const key = `verification:${userId}:password_reset`;
+    await redisClient.del(key);
   }
 }
 

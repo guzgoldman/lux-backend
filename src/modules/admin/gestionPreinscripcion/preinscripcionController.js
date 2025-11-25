@@ -8,10 +8,15 @@ const {
   Preinscripcion,
   Carrera,
   PlanEstudio,
+  Direccion,
   sequelize,
 } = require("../../../models");
 const { Op } = require("sequelize");
 const { enqueueEmail } = require("../../../queues/email.queue");
+const path = require("path");
+const fs = require("fs");
+const puppeteer = require("puppeteer");
+const handlebars = require("handlebars");
 
 exports.listarPreinscripcion = async (req, res, next) => {
   try {
@@ -210,6 +215,117 @@ exports.ocultar = async (req, res, next) => {
       res.status(204).send();
     });
   } catch (err) {
+    next(err);
+  }
+};
+
+exports.generarFichaInscripcion = async (req, res, next) => {
+  const { personaId } = req.params;
+
+  try {
+    const persona = await Persona.findByPk(personaId, {
+      include: [
+        {
+          model: Preinscripcion,
+          as: "preinscripciones",
+          where: { estado: "Pendiente" },
+          include: [
+            {
+              model: Carrera,
+              as: "carrera",
+              attributes: ["nombre"],
+            },
+          ],
+        },
+        {
+          model: Direccion,
+          as: "direcciones",
+        },
+      ],
+    });
+
+    if (!persona) {
+      return res.status(404).json({ message: "Persona no encontrada" });
+    }
+
+    const preinscripcion = persona.preinscripciones?.[0];
+    if (!preinscripcion) {
+      return res.status(404).json({ message: "No hay preinscripción pendiente" });
+    }
+
+    // Leer logo y convertir a base64
+    const logoPath = path.join(__dirname, "../../../assets/logo.png");
+    const logoBuffer = fs.readFileSync(logoPath);
+    const logoBase64 = logoBuffer.toString("base64");
+
+    // Helper para Handlebars
+    handlebars.registerHelper('eq', function(a, b) {
+      return a === b;
+    });
+
+    // Preparar datos para la ficha
+    const carreraNombre = preinscripcion.carrera?.nombre || "";
+    const direccionCompleta = persona.direcciones?.[0]
+      ? `${persona.direcciones?.[0]?.calle} ${persona.direcciones?.[0]?.altura}`
+      : "";
+
+    const datos = {
+      logoBase64,
+      carrera: carreraNombre.toUpperCase(),
+      nombre: persona.nombre,
+      apellido: persona.apellido,
+      dni: persona.dni,
+      estadoCivil: "", // A completar a mano
+      numeroHijos: "", // A completar a mano
+      direccion: direccionCompleta,
+      localidad: persona.direcciones?.[0]?.localidad || "",
+      codigoPostal: "",
+      celular: persona.telefono,
+      email: persona.email,
+      fechaNacimiento: persona.fecha_nacimiento
+        ? new Date(persona.fecha_nacimiento).toLocaleDateString("es-AR")
+        : "",
+      lugarNacimiento: "", // A completar a mano
+      provincia: "", // A completar a mano
+      nacionalidad: persona.nacionalidad,
+      estudiosNivel: "", // A completar a mano
+      estudiosTitulo: "", // A completar a mano
+      estudiosInstitucion: "", // A completar a mano
+    };
+
+    // Leer y compilar template
+    const templatePath = path.join(__dirname, "../../../templates/ficha_inscripcion.hbs");
+    const templateSource = fs.readFileSync(templatePath, "utf-8");
+    const template = handlebars.compile(templateSource);
+    const html = template(datos);
+
+    // Generar PDF
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    const pdf = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: {
+        top: "15mm",
+        right: "15mm",
+        bottom: "15mm",
+        left: "15mm",
+      },
+    });
+    await browser.close();
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="Ficha_Inscripcion_${persona.apellido}_${persona.nombre}.pdf"`
+    );
+    res.send(pdf);
+  } catch (err) {
+    console.error("Error al generar ficha:", err);
     next(err);
   }
 };

@@ -938,10 +938,6 @@ const obtenerProfesoresPorMateria = async (req, res) => {
       })
     );
 
-    console.log(
-      `Encontrados ${profesoresUnicos.length} profesores únicos para la materia ${idMateria}`
-    ); // Debug
-
     res.status(200).json({
       success: true,
       data: profesoresUnicos,

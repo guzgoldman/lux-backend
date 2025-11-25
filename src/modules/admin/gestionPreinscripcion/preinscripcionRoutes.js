@@ -4,7 +4,8 @@ const router  = express.Router();
 const {
   listarPreinscripcion,
   aceptar,
-  ocultar
+  ocultar,
+  generarFichaInscripcion
 } = require('./preinscripcionController');
 
 const {
@@ -31,6 +32,13 @@ router.post(
   verifyToken,
   requireRole('Administrador'),
   ocultar
+);
+
+router.get(
+  '/:personaId/ficha',
+  verifyToken,
+  requireRole('Administrador'),
+  generarFichaInscripcion
 );
 
 module.exports = router;

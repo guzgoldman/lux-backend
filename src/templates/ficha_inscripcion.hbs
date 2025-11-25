@@ -1,0 +1,164 @@
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ficha de inscripción a primer año</title>
+    <style>
+      @page { size: A4; margin: 12mm; } * { box-sizing: border-box; } body {
+      font-family: "Times New Roman", serif; font-size: 12pt; color: #111; }
+      header { display: flex; align-items: center; gap: 16px; border-bottom: 1px
+      solid #222; padding-bottom: 8px; margin-bottom: 12px; } header img.logo {
+      width: 128px; height: auto; } header .info { line-height: 1.15; font-size:
+      11pt; } header .info .resalt { font-weight: bold; font-size: 16px; } h1 { text-align: center; margin: 18px 0 10px; font-size: 16pt;
+      letter-spacing: .5px; text-transform: uppercase; } .info { flex: 1; } h1 {
+      font-size: 17pt; text-align: center; margin: 8px 0 10px; font-weight:
+      bold; } .section { margin-bottom: 10px; } .section-title { font-weight:
+      bold; font-size: 14pt; margin-bottom: 5px; padding: 3px 6px; border: 1px
+      solid black; } .checkbox-group { display: flex; gap: 20px; margin: 5px 0; }
+      .checkbox-item { display: flex; align-items: center; gap: 4px; } .checkbox
+      { width: 14px; height: 14px; border: 1.5px solid #000; display:
+      inline-block; } .checkbox.checked::after { content: '✓'; font-size: 12pt;
+      font-weight: bold; display: block; text-align: center; line-height: 11px;
+      } .field-group { display: flex; gap: 8px; margin: 5px 0; flex-wrap: wrap;
+      } .field { flex: 1; min-width: 140px; } .field-label { font-size: 12pt;
+      font-weight: bold; margin-bottom: 2px; } .field-value { border-bottom: 1px
+      solid #000; min-height: 16px; padding: 1px 3px; font-size: 12pt; }
+      .field-value.empty { min-height: 16px; } .small-field { flex: 0 0 auto;
+      min-width: 80px; } .medium-field { flex: 0 0 auto; min-width: 180px; }
+      .large-field { flex: 2; } .signature-section { display: flex; gap: 40px;
+      margin-top: 20px; justify-content: space-between; } .signature-box { flex:
+      1; text-align: center; } .signature-line { border-top: 1px solid #000;
+      margin-top: 40px; padding-top: 4px; font-size: 12pt; font-weight: bold; },
+      .resalt { font-weight: bold; } .subtle { opacity: 0.9; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <img class="logo" src="data:image/png;base64,{{logoBase64}}" alt="Logo" />
+      <div class="info">
+        <div class="resalt">Instituto Superior Nuestra Señora de Luján del Buen
+          Viaje</div>
+        <div class="subtle">DIEGEP 4283 – Ruta 8 Nº 6725 (1657) Loma Hermosa -
+          San Martín - TE 5263-2395</div>
+        <div class="subtle">{{contacto}}</div>
+      </div>
+    </header>
+
+    <h1>Ficha de inscripción a primer año</h1>
+
+    <div class="section">
+      <div class="section-title">Carrera:</div>
+      <div class="field-group">
+        <div class="field large-field">
+          <div class="field-value">{{carrera}}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Datos personales:</div>
+      <div class="field-group">
+        <div class="field large-field">
+          <div class="field-label">Nombre completo:</div>
+          <div class="field-value">{{nombre}} {{apellido}}</div>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field">
+          <div class="field-label">Nº de documento:</div>
+          <div class="field-value">{{dni}}</div>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field large-field">
+          <div class="field-label">Dirección:</div>
+          <div class="field-value">{{direccion}} {{altura}}</div>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field">
+          <div class="field-label">Localidad:</div>
+          <div class="field-value">{{localidad}}</div>
+        </div>
+        <div class="field small-field">
+          <div class="field-label">Código postal:</div>
+          <div class="field-value">{{codigoPostal}}</div>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field">
+          <div class="field-label">Teléfono celular:</div>
+          <div class="field-value">{{celular}}</div>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field large-field">
+          <div class="field-label">Email:</div>
+          <div class="field-value">{{email}}</div>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field">
+          <div class="field-label">Fecha de nacimiento:</div>
+          <div class="field-value">{{fechaNacimiento}}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Lugar de nacimiento:</div>
+          <div class="field-value">{{lugarNacimiento}}</div>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field">
+          <div class="field-label">Provincia:</div>
+          <div class="field-value">{{provincia}}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Nacionalidad:</div>
+          <div class="field-value">{{nacionalidad}}</div>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field">
+          <div class="field-label">Estado civil:</div>
+          <div class="field-value">{{estadoCivil}}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Cantidad de hijos:</div>
+          <div class="field-value">{{numeroHijos}}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Estudios previos:</div>
+      <div class="field-group">
+        <div class="field large-field">
+          <div class="field-label">Nivel máximo de estudios alcanzados:</div>
+          <div class="field-value">{{estudiosNivel}}</div>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field large-field">
+          <div class="field-label">Título:</div>
+          <div class="field-value">{{estudiosTitulo}}</div>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field large-field">
+          <div class="field-label">Institución:</div>
+          <div class="field-value">{{estudiosInstitucion}}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="signature-section">
+      <div class="signature-box">
+        <div class="signature-line">Fecha</div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-line">Firma</div>
+      </div>
+    </div>
+  </body>
+</html>

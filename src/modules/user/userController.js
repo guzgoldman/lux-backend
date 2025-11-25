@@ -396,15 +396,20 @@ exports.solicitarCambioDato = async (req, res, next) => {
       expirationMinutes
     });
 
+    // Determinar a qué dirección enviar el email
+    // Si es cambio de email, enviar al nuevo email
+    // Si es cambio de teléfono, enviar al email actual
+    const destinatarioEmail = campo === 'email' ? nuevoValor.trim() : usuario.persona.email;
+
     // Enviar email
     await enviarCorreo({
-      to: usuario.persona.email,
+      to: destinatarioEmail,
       subject: `Verificación de cambio de ${fieldNameMap[campo]}`,
       html
     });
 
     res.json({ 
-      message: `Código de verificación enviado a ${usuario.persona.email}`,
+      message: `Código de verificación enviado a ${destinatarioEmail}`,
       expiresIn: expirationMinutes * 60 // segundos
     });
 

@@ -340,9 +340,6 @@ exports.rechazarSolicitud = async (req, res, next) => {
 exports.obtenerCarrerasAlumno = async (req, res, next) => {
   try {
     const { idUsuario } = req.params;
-    
-    console.log('ID Usuario recibido:', idUsuario);
-
     // Primero buscar el usuario para obtener su id_persona
     const usuario = await Usuario.findByPk(idUsuario, {
       attributes: ['id', 'id_persona'],
@@ -355,16 +352,12 @@ exports.obtenerCarrerasAlumno = async (req, res, next) => {
       ]
     });
 
-    console.log('Usuario encontrado:', usuario ? usuario.toJSON() : 'null');
-
     if (!usuario) {
       return res.status(404).json({
         message: "Usuario no encontrado",
         idBuscado: idUsuario
       });
     }
-
-    console.log('ID Persona del usuario:', usuario.id_persona);
 
     // Luego buscar las carreras usando el id_persona
     const carreras = await AlumnoCarrera.findAll({
@@ -385,8 +378,6 @@ exports.obtenerCarrerasAlumno = async (req, res, next) => {
         }
       ]
     });
-
-    console.log('Carreras encontradas:', carreras.length);
 
     res.json(carreras);
 
